@@ -84,10 +84,22 @@ def main(argv: list[str]) -> int:
         raise InputError("concurrency and timeout must be positive")
     sessions = load_sessions(args.trace)
     with ThreadPoolExecutor(max_workers=args.concurrency) as pool:
-        futures = [pool.submit(replay_session, args.url, turns, args.timeout, args.seed) for turns in sessions.values()]
+        futures = [
+            pool.submit(replay_session, args.url, turns, args.timeout, args.seed)
+            for turns in sessions.values()
+        ]
         results = [result for future in futures for result in future.result()]
-    args.output.write_text(json.dumps({
-        "unofficial": True, "seed": args.seed, "concurrency": args.concurrency,
-        "trace": str(args.trace), "results": results,
-    }, indent=2) + "\n")
+    args.output.write_text(
+        json.dumps(
+            {
+                "unofficial": True,
+                "seed": args.seed,
+                "concurrency": args.concurrency,
+                "trace": str(args.trace),
+                "results": results,
+            },
+            indent=2,
+        )
+        + "\n"
+    )
     return 0
