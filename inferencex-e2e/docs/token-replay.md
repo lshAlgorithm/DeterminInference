@@ -70,7 +70,7 @@ execution path.
 
 ## Current implementation and reproduction
 
-The local SGLang checkout at `../../sglang` (relative to the InferenceX
+The local SGLang checkout at `../sglang` (relative to the InferenceX
 repository root) is not required by the regular benchmark client. The
 replay engine work targets SGLang **v0.5.10**, commit
 `1519acf37c23f2189adb93f57ca9cd2db1bebf18`, matching the initial `gpu6`
