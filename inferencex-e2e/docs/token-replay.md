@@ -158,9 +158,9 @@ not a throughput or MoE load-balance claim.
 
 ## Validation status
 
-- Client tests: 7 passed, including real local HTTP transport, exact
+- Client tests: 8 passed, including real local HTTP transport, exact
   request fields, per-session order, invalid input, and output drift.
-- Container-side benchmark tests: 194 passed, 2 skipped.
+- Container-side benchmark tests: 195 passed, 2 skipped.
 - InferenceX lint and format checks passed.
 - Full macOS suite after restoring the original `srt-slurm` gitlink:
   3201 passed, 19 failed, 2 skipped. Failures involve process-group
@@ -168,8 +168,7 @@ not a throughput or MoE load-balance claim.
   `libpython3.12.dylib`, and a CI fixture writing
   `/changelog_metadata.json` on a read-only root filesystem.
 - On `gpu6`, vocabulary/stopping validation and the real GPU kernel's
-  mixed, reordered, and filtered batches passed. This does not prove
-  model KV alignment.
+  mixed, reordered, and filtered batches passed.
 - The preexisting server environment failed to import `sgl_kernel`:
   PyTorch 2.10.0 did not match SGLang v0.5.10's pinned PyTorch 2.9.1.
   A separate system-site-packages virtual environment now imports the
@@ -178,5 +177,53 @@ not a throughput or MoE load-balance claim.
   original environment so native-library lookup can find them.
 
 Logs are stored under `experimental/token_replay/evidence/` with Git LFS.
-Real-engine and overhead verification remain pending. Existing official
-benchmark recipes remain unchanged until the replay path has serving evidence.
+Real-engine verification passed on GPU0 (RTX 4090), Qwen2.5-7B-Instruct-GPTQ-Int4,
+SGLang 0.5.10, PyTorch 2.9.1+cu128, CUDA toolkit 12.8, seed 42:
+24 recorded IDs replayed exactly with their matching logprob IDs; mixed
+lengths and internal EOS passed. The next turn reused 34 cached tokens
+(required prefix: 33); cached-versus-fresh greedy outputs and logprobs
+passed the script's tolerance (0.05 for logprobs). This is behavioral
+cache evidence, not a bitwise comparison of KV tensors.
+
+The isolated remote environment is `/home/tegao/infra-token-replay`.
+The original serving environment was not modified. CUDA 12.8 was needed
+for the GPTQ C++20 JIT; the system CUDA 11.8 could not compile it.
+Existing official benchmark recipes remain unchanged. No official AgentX
+score, vLLM port, newer SGLang port, or MoE routing result is claimed.
+
+
+Six measured requests per condition after two warmup iterations gave median
+whole-request times of 137.634 ms (ordinary) and 137.833 ms (replay),
+a descriptive difference of 0.144%. These short, single-concurrency
+requests include prefill and do not isolate staging/kernel overhead or
+establish a statistically significant performance effect.
+
+## AgentX harness import
+
+Export token traces to the harness's existing Mooncake raw-payload loader:
+
+```bash
+python3 -m infx.bench token-replay \
+  --trace recorded-trace.jsonl --output agentx-token.jsonl \
+  --seed 42 --agentx-model SERVED_MODEL
+```
+
+The patched OpenAI completions endpoint accepts `replay_token_ids` and
+forwards it to sampling. The exporter preserves full prompt IDs and response
+IDs, converts seconds to Mooncake milliseconds, and requests streaming usage.
+Use a tokenizer-enabled server for text streaming; the native ID-checking
+client above instead requires `skip_tokenizer_init=True`.
+
+`experimental/token_replay/check_harness.py` passed against the actual
+PyPI `agentx-harness==1.0.13` loader: two turns, original token payloads,
+750 ms delay, full-history context mode, and no synthetic prompt generation.
+This verifies import, not the complete streaming benchmark or an official
+AgentX workload score. The exported format currently represents independent
+sessions with ordered turns, not fork/join dependencies.
+
+A bounded 65,536-byte range read of the public
+`semianalysisai/cc-traces-weka-062126/traces.jsonl` confirmed that the first
+request has `t`, `model`, `in`, `out`, `hash_ids`, `api_time`, `type`, and
+`ttft`, with no original token IDs. This observation concerns the sampled
+prefix only; it is not a full audit of the 1.85 GB corpus. Its hash/length
+metadata cannot recover original text or establish representative MoE routing.
