@@ -4,6 +4,7 @@ import argparse
 import json
 import math
 import time
+import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -37,6 +38,9 @@ def load_sessions(path: Path) -> dict[str, list[dict]]:
 
 def replay_session(url: str, turns: list[dict], timeout: float, seed: int) -> list[dict]:
     """Send each turn after its predecessor completes and verify every output ID."""
+    address = urllib.parse.urlsplit(url)
+    if address.scheme not in {"http", "https"} or not address.hostname:
+        raise InputError("the serving URL must use HTTP or HTTPS")
     results = []
     for index, turn in enumerate(turns):
         time.sleep(turn["delay_seconds"])
@@ -48,12 +52,12 @@ def replay_session(url: str, turns: list[dict], timeout: float, seed: int) -> li
                 "replay_token_ids": turn["output_ids"],
             },
         }
-        request = urllib.request.Request(
+        request = urllib.request.Request(  # noqa: S310 — HTTP(S) validated above.
             url.rstrip("/") + "/generate", data=json.dumps(payload).encode(),
             headers={"Content-Type": "application/json"}, method="POST",
         )
         start = time.perf_counter()
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
             output = json.load(response)
         elapsed = time.perf_counter() - start
         if output.get("output_ids") != turn["output_ids"]:
