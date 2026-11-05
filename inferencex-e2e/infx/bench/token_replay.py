@@ -85,6 +85,27 @@ def replay_session(url: str, turns: list[dict], timeout: float, seed: int) -> li
     return results
 
 
+def export_agentx(sessions: dict[str, list[dict]], output: Path, model: str, seed: int) -> None:
+    """Export Mooncake verbatim payloads without retokenizing the recorded IDs."""
+    if not model.strip():
+        raise InputError("the served model name must be nonempty")
+    with output.open("w") as destination:
+        for session_id, turns in sessions.items():
+            for turn in turns:
+                row = {
+                    "session_id": session_id,
+                    "delay": 1000 * turn["delay_seconds"],
+                    "output_length": len(turn["output_ids"]),
+                    "payload": {
+                        "model": model, "prompt": turn["input_ids"],
+                        "max_tokens": len(turn["output_ids"]), "ignore_eos": True,
+                        "replay_token_ids": turn["output_ids"], "temperature": 0, "seed": seed,
+                        "stream": True, "stream_options": {"include_usage": True},
+                    },
+                }
+                destination.write(json.dumps(row) + "\n")
+
+
 def main(argv: list[str]) -> int:
     """Replay independent sessions with bounded concurrency and explicit inputs."""
     parser = argparse.ArgumentParser()
