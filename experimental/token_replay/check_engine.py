@@ -2,6 +2,7 @@ import argparse
 import json
 import math
 import time
+from pathlib import Path
 from types import SimpleNamespace
 
 import sglang as sgl
@@ -145,6 +146,10 @@ def check_engine(model: str) -> dict:
             "mixed_batch_and_eos": "passed",
             "cached_vs_fresh": "passed",
             "request_seconds_including_prefill": timings,
+            "trace_rows": [
+                {"session_id": "sky", "input_ids": prompt, "output_ids": recorded, "delay_seconds": 0},
+                {"session_id": "sky", "input_ids": followup, "output_ids": fresh["output_ids"], "delay_seconds": 0},
+            ],
         }
     finally:
         engine.shutdown()
@@ -153,7 +158,10 @@ def check_engine(model: str) -> dict:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True)
+    parser.add_argument("--trace-output", type=Path, required=True)
     args = parser.parse_args()
     check_validation()
     check_kernel()
-    print(json.dumps(check_engine(args.model), indent=2))
+    report = check_engine(args.model)
+    args.trace_output.write_text("\n".join(json.dumps(row) for row in report.pop("trace_rows")) + "\n")
+    print(json.dumps(report, indent=2))
