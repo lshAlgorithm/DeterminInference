@@ -65,7 +65,7 @@ index 8142432..ef2ffcf 100644
          # Build return object
          if isinstance(obj, GenerateReqInput):
 diff --git a/python/sglang/srt/sampling/sampling_batch_info.py b/python/sglang/srt/sampling/sampling_batch_info.py
-index 885936b..663b5a6 100644
+index 885936b..651173d 100644
 --- a/python/sglang/srt/sampling/sampling_batch_info.py
 +++ b/python/sglang/srt/sampling/sampling_batch_info.py
 @@ -10,6 +10,7 @@ import sglang.srt.sampling.penaltylib as penaltylib
@@ -97,7 +97,7 @@ index 885936b..663b5a6 100644
      def filter_batch(self, keep_indices: List[int], keep_indices_device: torch.Tensor):
          self.penalizer_orchestrator.filter(keep_indices_device)
 +        if self.token_replay is not None:
-+            self.token_replay = self.token_replay.filter(keep_indices_device)
++            self.token_replay = self.token_replay.filter(keep_indices_device, keep_indices)
  
          if self.has_custom_logit_processor:
              self._filter_batch_custom_logit_processor(keep_indices, keep_indices_device)
@@ -191,10 +191,10 @@ index a7f4c66..822b5e0 100644
              raise ValueError(
 diff --git a/python/sglang/srt/sampling/token_replay.py b/python/sglang/srt/sampling/token_replay.py
 new file mode 100644
-index 0000000..edad155
+index 0000000..f39f965
 --- /dev/null
 +++ b/python/sglang/srt/sampling/token_replay.py
-@@ -0,0 +1,92 @@
+@@ -0,0 +1,87 @@
 +from dataclasses import dataclass
 +from typing import Optional
 +
@@ -206,49 +206,53 @@ index 0000000..edad155
 +@triton.jit
 +def _replace_sampled_tokens(
 +    sampled,
-+    tokens,
-+    prompt_lengths,
++    metadata,
 +    positions,
-+    width: tl.constexpr,
 +    batch_size: tl.constexpr,
 +    BLOCK: tl.constexpr,
 +):
 +    rows = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
 +    valid = rows < batch_size
-+    step = (
-+        tl.load(positions + rows, valid, 0)
-+        - tl.load(prompt_lengths + rows, valid, 0)
-+        + 1
-+    )
-+    recorded = tl.load(
-+        tokens + rows * width + step, valid & (step >= 0) & (step < width), -1
-+    )
-+    tl.store(sampled + rows, recorded, valid & (recorded >= 0))
++    address = tl.load(metadata + rows * 3, valid, 0)
++    length = tl.load(metadata + rows * 3 + 1, valid, 0)
++    prompt_length = tl.load(metadata + rows * 3 + 2, valid, 0)
++    step = tl.load(positions + rows, valid, 0) - prompt_length + 1
++    replace = valid & (step >= 0) & (step < length)
++    recorded = tl.load(address.to(tl.pointer_type(tl.int64)) + step, replace, 0)
++    tl.store(sampled + rows, recorded, replace)
 +
 +
 +@dataclass
 +class TokenReplayBatch:
-+    tokens: torch.Tensor
-+    prompt_lengths: torch.Tensor
++    tokens: tuple[Optional[torch.Tensor], ...]
++    metadata: torch.Tensor
 +
 +    @classmethod
 +    def from_requests(cls, reqs: list, device: str) -> Optional["TokenReplayBatch"]:
 +        sequences = [r.sampling_params.replay_token_ids for r in reqs]
 +        if not any(s is not None for s in sequences):
 +            return None
-+        width = max(len(s) if s is not None else 0 for s in sequences)
-+        rows = [(s or []) + [-1] * (width - len(s or [])) for s in sequences]
-+        return cls(
-+            torch.tensor(rows, dtype=torch.int64, device=device),
-+            torch.tensor(
-+                [len(r.origin_input_ids) for r in reqs],
-+                dtype=torch.int64,
-+                device=device,
-+            ),
++        packed = torch.tensor(
++            [token for sequence in sequences if sequence is not None for token in sequence],
++            dtype=torch.int64,
++            device=device,
 +        )
++        tokens, metadata = [], []
++        offset = 0
++        for req, sequence in zip(reqs, sequences):
++            length = len(sequence) if sequence is not None else 0
++            view = packed[offset : offset + length] if length else None
++            tokens.append(view)
++            metadata.append(
++                [view.data_ptr() if view is not None else 0, length, len(req.origin_input_ids)]
++            )
++            offset += length
++        return cls(tuple(tokens), torch.tensor(metadata, dtype=torch.int64, device=device))
 +
-+    def filter(self, indices: torch.Tensor) -> "TokenReplayBatch":
-+        return TokenReplayBatch(self.tokens[indices], self.prompt_lengths[indices])
++    def filter(self, indices: torch.Tensor, keep_indices: list[int]) -> "TokenReplayBatch":
++        return TokenReplayBatch(
++            tuple(self.tokens[i] for i in keep_indices), self.metadata[indices]
++        )
 +
 +    @staticmethod
 +    def merge(
@@ -260,30 +264,21 @@ index 0000000..edad155
 +    ) -> Optional["TokenReplayBatch"]:
 +        if left is None and right is None:
 +            return None
-+        width = max(b.tokens.shape[1] for b in (left, right) if b is not None)
-+        rows, prompts = [], []
++        tokens, metadata = [], []
 +        for batch, size in ((left, left_size), (right, right_size)):
 +            if batch is None:
-+                rows.append(
-+                    torch.full((size, width), -1, dtype=torch.int64, device=device)
-+                )
-+                prompts.append(torch.zeros(size, dtype=torch.int64, device=device))
++                tokens.extend([None] * size)
++                metadata.append(torch.zeros((size, 3), dtype=torch.int64, device=device))
 +            else:
-+                rows.append(
-+                    torch.nn.functional.pad(
-+                        batch.tokens, (0, width - batch.tokens.shape[1]), value=-1
-+                    )
-+                )
-+                prompts.append(batch.prompt_lengths)
-+        return TokenReplayBatch(torch.cat(rows), torch.cat(prompts))
++                tokens.extend(batch.tokens)
++                metadata.append(batch.metadata)
++        return TokenReplayBatch(tuple(tokens), torch.cat(metadata))
 +
 +    def apply(self, sampled: torch.Tensor, positions: torch.Tensor) -> None:
 +        _replace_sampled_tokens[(triton.cdiv(sampled.numel(), 128),)](
 +            sampled,
-+            self.tokens,
-+            self.prompt_lengths,
++            self.metadata,
 +            positions,
-+            self.tokens.shape[1],
 +            sampled.numel(),
 +            128,
 +        )
