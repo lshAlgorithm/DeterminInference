@@ -191,10 +191,10 @@ index a7f4c66..822b5e0 100644
              raise ValueError(
 diff --git a/python/sglang/srt/sampling/token_replay.py b/python/sglang/srt/sampling/token_replay.py
 new file mode 100644
-index 0000000..f39f965
+index 0000000..e1d5d0c
 --- /dev/null
 +++ b/python/sglang/srt/sampling/token_replay.py
-@@ -0,0 +1,87 @@
+@@ -0,0 +1,90 @@
 +from dataclasses import dataclass
 +from typing import Optional
 +
@@ -249,10 +249,13 @@ index 0000000..f39f965
 +            offset += length
 +        return cls(tuple(tokens), torch.tensor(metadata, dtype=torch.int64, device=device))
 +
-+    def filter(self, indices: torch.Tensor, keep_indices: list[int]) -> "TokenReplayBatch":
-+        return TokenReplayBatch(
-+            tuple(self.tokens[i] for i in keep_indices), self.metadata[indices]
-+        )
++    def filter(
++        self, indices: torch.Tensor, keep_indices: list[int]
++    ) -> Optional["TokenReplayBatch"]:
++        tokens = tuple(self.tokens[i] for i in keep_indices)
++        if not any(token is not None for token in tokens):
++            return None
++        return TokenReplayBatch(tokens, self.metadata[indices])
 +
 +    @staticmethod
 +    def merge(
@@ -284,10 +287,10 @@ index 0000000..f39f965
 +        )
 diff --git a/python/sglang/test/test_token_replay_http.py b/python/sglang/test/test_token_replay_http.py
 new file mode 100644
-index 0000000..b735df2
+index 0000000..12b812b
 --- /dev/null
 +++ b/python/sglang/test/test_token_replay_http.py
-@@ -0,0 +1,96 @@
+@@ -0,0 +1,111 @@
 +import json
 +import os
 +import subprocess
@@ -380,6 +383,21 @@ index 0000000..b735df2
 +        with ThreadPoolExecutor(max_workers=4) as pool:
 +            results = list(pool.map(self.check_stream, range(8)))
 +        print(json.dumps({'seed': 42, 'concurrent_streams': results}, indent=2), flush=True)
++
++    def test_harness(self):
++        command = [
++            os.environ['REPLAY_HARNESS_BIN'], 'profile',
++            '--model', self.model, '--url', self.url,
++            '--endpoint-type', 'completions', '--streaming',
++            '--input-file', os.environ['REPLAY_HARNESS_TRACE'],
++            '--custom-dataset-type', 'mooncake-trace',
++            '--tokenizer', self.model, '--concurrency', '1',
++            '--request-count', '2', '--warmup-request-count', '0',
++            '--random-seed', '42', '--no-server-metrics', '--ui', 'none',
++            '--export-level', 'raw', '--artifact-dir', os.environ['REPLAY_HARNESS_OUTPUT'],
++        ]
++        print(json.dumps({'harness_command': command}), flush=True)
++        subprocess.run(command, check=True, timeout=300)
 +
 +
 +if __name__ == '__main__':
