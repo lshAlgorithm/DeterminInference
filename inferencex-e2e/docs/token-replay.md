@@ -300,3 +300,23 @@ CUDA graph device-time medians on RTX 4090 (microseconds per replacement):
 
 The storage optimization primarily addresses staging and batch mutations;
 these measurements do not demonstrate a universal decode speedup.
+
+
+## Return to ordinary sampling
+
+When filtering removes the last recorded-response row, replay state now
+becomes `None` before any GPU metadata gather. The existing sampler skips
+the replacement kernel entirely for the remaining ordinary requests.
+`check_fastpath.py` failed against the prior implementation, then passed
+with this change. It also checks empty batches, the unchanged in-flight
+batch, and rejoining a new replay request. The 200-round storage stress
+test passed again; before/after logs are retained with Git LFS.
+
+To run only the HTTP streaming test, select
+`TestTokenReplayHTTP.test_concurrent_streams` on the unittest command line.
+The separate `TestTokenReplayHTTP.test_harness` method additionally requires
+`REPLAY_HARNESS_BIN`, `REPLAY_HARNESS_TRACE`, and `REPLAY_HARNESS_OUTPUT`.
+It runs the real `aiperf profile` CLI with the exported Mooncake payload,
+completion streaming, concurrency 1, seed 42, and two requests. Harness
+artifacts must be inspected for errors and actual outputs; process exit
+alone is insufficient evidence of replay success.
