@@ -16,9 +16,14 @@ def check_validation() -> None:
     valid = {"max_new_tokens": 2, "ignore_eos": True, "replay_token_ids": [1, 2]}
     SamplingParams(**valid).verify(10)
     for change in (
-        {"replay_token_ids": []}, {"replay_token_ids": [1, 10]},
-        {"replay_token_ids": [True, 2]}, {"max_new_tokens": 3},
-        {"ignore_eos": False}, {"stop": ["end"]}, {"regex": "a"}, {"regex": ""},
+        {"replay_token_ids": []},
+        {"replay_token_ids": [1, 10]},
+        {"replay_token_ids": [True, 2]},
+        {"max_new_tokens": 3},
+        {"ignore_eos": False},
+        {"stop": ["end"]},
+        {"regex": "a"},
+        {"regex": ""},
     ):
         try:
             SamplingParams(**(valid | change)).verify(10)
