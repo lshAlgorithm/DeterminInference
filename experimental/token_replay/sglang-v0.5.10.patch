@@ -282,3 +282,105 @@ index 0000000..f39f965
 +            sampled.numel(),
 +            128,
 +        )
+diff --git a/python/sglang/test/test_token_replay_http.py b/python/sglang/test/test_token_replay_http.py
+new file mode 100644
+index 0000000..b735df2
+--- /dev/null
++++ b/python/sglang/test/test_token_replay_http.py
+@@ -0,0 +1,96 @@
++import json
++import os
++import subprocess
++import sys
++import time
++import unittest
++from concurrent.futures import ThreadPoolExecutor
++
++import requests
++from transformers import AutoTokenizer
++
++from sglang.srt.utils import kill_process_tree
++
++
++class TestTokenReplayHTTP(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        cls.model = os.environ['REPLAY_TEST_MODEL']
++        cls.url = os.environ['REPLAY_TEST_URL']
++        cls.tokenizer = AutoTokenizer.from_pretrained(cls.model)
++        cls.process = subprocess.Popen([
++            sys.executable, '-m', 'sglang.launch_server',
++            '--model-path', cls.model, '--host', '127.0.0.1',
++            '--port', cls.url.rsplit(':', 1)[1],
++            '--random-seed', '42', '--mem-fraction-static', '0.55',
++            '--context-length', '4096', '--max-running-requests', '8',
++            '--cuda-graph-max-bs', '8', '--attention-backend', 'triton',
++            '--log-level', 'warning',
++        ])
++        cls.addClassCleanup(kill_process_tree, cls.process.pid)
++        deadline = time.monotonic() + 600
++        while time.monotonic() < deadline:
++            if cls.process.poll() is not None:
++                raise RuntimeError(f'server exited: {cls.process.returncode}')
++            try:
++                if requests.get(cls.url + '/health', timeout=2).status_code == 200:
++                    return
++            except requests.RequestException:
++                pass
++            time.sleep(1)
++        raise TimeoutError('test server did not become healthy')
++
++    def check_stream(self, index):
++        prompt = self.tokenizer.encode(f'Explain the number {index}:')
++        recorded = self.tokenizer.encode(f' Recorded answer {index}: blue sky and green trees.')
++        payload = {
++            'model': self.model, 'prompt': prompt, 'max_tokens': len(recorded),
++            'replay_token_ids': recorded, 'ignore_eos': True, 'temperature': 0.8,
++            'seed': 42, 'stream': True, 'stream_options': {'include_usage': True},
++            'logprobs': 1,
++        }
++        text, tokens, chunks, usage, done = '', [], 0, None, False
++        with requests.post(self.url + '/v1/completions', json=payload, stream=True, timeout=120) as response:
++            response.raise_for_status()
++            for line in response.iter_lines():
++                if not line.startswith(b'data: '):
++                    continue
++                data = line[6:]
++                if data == b'[DONE]':
++                    done = True
++                    break
++                chunk = json.loads(data)
++                self.assertNotIn('error', chunk)
++                chunks += 1
++                if chunk.get('usage') is not None:
++                    usage = chunk['usage']
++                for choice in chunk['choices']:
++                    text += choice['text']
++                    if choice.get('logprobs'):
++                        tokens.extend(choice['logprobs']['tokens'])
++        self.assertTrue(done)
++        self.assertGreater(chunks, 1)
++        self.assertEqual(text, self.tokenizer.decode(recorded))
++        self.assertEqual(tokens, [self.tokenizer.decode([token]) for token in recorded])
++        self.assertEqual(usage['completion_tokens'], len(recorded))
++        followup = prompt + recorded + self.tokenizer.encode(' Continue:')
++        response = requests.post(self.url + '/generate', json={
++            'input_ids': followup, 'sampling_params': {
++                'max_new_tokens': len(recorded), 'ignore_eos': True,
++                'replay_token_ids': recorded, 'temperature': 0, 'sampling_seed': 42,
++            }, 'return_logprob': True,
++        }, timeout=120)
++        response.raise_for_status()
++        result = response.json()
++        self.assertEqual([x[1] for x in result['meta_info']['output_token_logprobs']], recorded)
++        self.assertGreaterEqual(result['meta_info']['cached_tokens'], len(prompt) + len(recorded) - 1)
++        return {'index': index, 'tokens': len(recorded), 'chunks': chunks, 'cached_tokens': result['meta_info']['cached_tokens']}
++
++    def test_concurrent_streams(self):
++        with ThreadPoolExecutor(max_workers=4) as pool:
++            results = list(pool.map(self.check_stream, range(8)))
++        print(json.dumps({'seed': 42, 'concurrent_streams': results}, indent=2), flush=True)
++
++
++if __name__ == '__main__':
++    unittest.main()
