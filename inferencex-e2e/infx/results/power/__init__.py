@@ -1,0 +1,90 @@
+"""Power-metric transformations independent of telemetry and artifact formats."""
+
+from __future__ import annotations
+
+import math
+from collections.abc import Iterable, Mapping
+from typing import Any
+
+POWER_METRIC_SCHEMA_VERSION = 2
+
+WHOLE_METRIC_KEYS = (
+    "avg_power_w",
+    "p75_power_w",
+    "p75_total_gpu_power_w",
+    "p90_power_w",
+    "p90_total_gpu_power_w",
+    "avg_total_gpu_power_w",
+    "total_gpu_energy_j",
+    "joules_per_successful_query",
+    "joules_per_input_token",
+    "joules_per_output_token",
+    "joules_per_total_token",
+)
+ROLE_METRIC_KEYS = (
+    "prefill_gpu_energy_j",
+    "decode_gpu_energy_j",
+    "prefill_avg_power_w",
+    "decode_avg_power_w",
+    "prefill_joules_per_input_token",
+    "decode_joules_per_output_token",
+)
+ALL_POWER_METRIC_KEYS = WHOLE_METRIC_KEYS + ROLE_METRIC_KEYS
+# Additive metrics from the cpu/ sub-package: the socket meter (Grace socket or AMD
+# package), the ACPI rails and the NVML module rail. They share power metric schema version 2
+# and are governed by cpu_power_valid, not power_valid.
+CPU_METRIC_KEYS = (
+    "avg_cpu_socket_power_w",
+    "avg_total_cpu_power_w",
+    "total_cpu_energy_j",
+    "avg_total_cpu_rail_power_w",
+    "total_cpu_rail_energy_j",
+    "avg_total_cpu_sysio_power_w",
+    "total_cpu_sysio_energy_j",
+    "avg_total_module_power_w",
+    "total_module_energy_j",
+)
+
+
+def _rounded_metric(key: str, value: float | None) -> float:
+    if value is None or not math.isfinite(value):
+        raise ValueError(f"non-finite power metric: {key}")
+    return round(value, 3 if key.endswith(("_w", "_j")) else 6)
+
+
+def with_power_metrics(
+    result: Mapping[str, Any],
+    *,
+    metric_keys: Iterable[str],
+    schema_version: int,
+    power_valid: bool,
+    metrics: Mapping[str, float],
+    cpu_power_valid: bool | None = None,
+    cpu_metrics: Mapping[str, float] | None = None,
+) -> dict[str, Any]:
+    """Return a result with stale metrics replaced by one validated metric set.
+
+    The caller supplies the metric family and schema version. Detailed invalid
+    reasons belong in its validation sidecar, not the numeric metric payload.
+    Neither the input result nor the supplied metrics is mutated.
+
+    The CPU-side leg is tri-state: ``cpu_power_valid=None`` means the package
+    carried no ``cpu/`` sub-package, so only stale CPU keys are stripped and the
+    output stays byte-identical to a run without the leg.
+    """
+    data = dict(result) if isinstance(result, Mapping) else result
+    for key in (*metric_keys, *CPU_METRIC_KEYS, "cpu_power_valid"):
+        data.pop(key, None)
+    data["power_metric_schema_version"] = schema_version
+    data["power_valid"] = int(power_valid)
+    data.pop("power_invalid_reasons", None)
+    data.pop("power_audit", None)
+    if power_valid:
+        for key, value in metrics.items():
+            data[key] = _rounded_metric(key, value)
+    if cpu_power_valid is not None:
+        data["cpu_power_valid"] = int(cpu_power_valid)
+        if cpu_power_valid:
+            for key, value in (cpu_metrics or {}).items():
+                data[key] = _rounded_metric(key, value)
+    return data
