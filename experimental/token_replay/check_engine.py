@@ -69,7 +69,7 @@ def check_kernel() -> None:
     sampled = torch.tensor([99, 98, 97], device="cuda", dtype=torch.int32)
     batch.apply(sampled, torch.tensor([3, 6, 5], device="cuda"))
     assert sampled.tolist() == [11, 98, 22]
-    reordered = batch.filter(torch.tensor([2, 0], device="cuda"))
+    reordered = batch.filter(torch.tensor([2, 0], device="cuda"), [2, 0])
     merged = TokenReplayBatch.merge(None, reordered, 1, 2, "cuda")
     sampled = torch.tensor([90, 91, 92], device="cuda")
     merged.apply(sampled, torch.tensor([100, 4, 5], device="cuda"))
