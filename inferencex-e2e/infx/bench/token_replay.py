@@ -25,7 +25,11 @@ def load_sessions(path: Path) -> dict[str, list[dict]]:
                 raise InputError(f"line {number}: session_id must be a nonempty string")
             for field in ("input_ids", "output_ids"):
                 ids = row[field]
-                if not isinstance(ids, list) or not ids or any(type(t) is not int or t < 0 for t in ids):
+                if (
+                    not isinstance(ids, list)
+                    or not ids
+                    or any(type(t) is not int or t < 0 for t in ids)
+                ):
                     raise InputError(f"line {number}: {field} must contain nonnegative integer IDs")
             delay = row["delay_seconds"]
             if type(delay) not in (int, float) or not math.isfinite(delay) or delay < 0:
