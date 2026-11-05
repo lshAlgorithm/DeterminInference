@@ -33,3 +33,34 @@ def load_sessions(path: Path) -> dict[str, list[dict]]:
     if not sessions:
         raise InputError("the trace contains no sessions")
     return sessions
+
+
+def replay_session(url: str, turns: list[dict], timeout: float, seed: int) -> list[dict]:
+    """Send each turn after its predecessor completes and verify every output ID."""
+    results = []
+    for index, turn in enumerate(turns):
+        time.sleep(turn["delay_seconds"])
+        payload = {
+            "input_ids": turn["input_ids"],
+            "sampling_params": {
+                "temperature": 0, "ignore_eos": True, "sampling_seed": seed,
+                "max_new_tokens": len(turn["output_ids"]),
+                "replay_token_ids": turn["output_ids"],
+            },
+        }
+        request = urllib.request.Request(
+            url.rstrip("/") + "/generate", data=json.dumps(payload).encode(),
+            headers={"Content-Type": "application/json"}, method="POST",
+        )
+        start = time.perf_counter()
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            output = json.load(response)
+        elapsed = time.perf_counter() - start
+        if output.get("output_ids") != turn["output_ids"]:
+            raise InputError(f"session {turn['session_id']} turn {index}: output IDs do not match trace")
+        results.append({
+            "session_id": turn["session_id"], "turn": index,
+            "input_tokens": len(turn["input_ids"]), "output_tokens": len(turn["output_ids"]),
+            "request_seconds": elapsed, "meta_info": output.get("meta_info", {}),
+        })
+    return results
