@@ -24,7 +24,7 @@ thread repairing KV state during measured decoding. Do not remove all
 warmup on that assumption: model/CUDA-graph warmup and initializing a
 trajectory at a sampled midpoint are distinct from repairing token drift.
 
-## Intended implementation
+## Implementation contract
 
 1. Accept original, tokenizer-specific prompt and response token IDs.
    Preserve full prompt IDs at each turn, including chat-template tokens,
@@ -68,6 +68,72 @@ execution path.
   cannot establish representative routing or load balance. A dense model
   correctness test does not validate this claim.
 
-This document records the implementation contract, not a completed or
-performance-validated feature. Existing official benchmark recipes remain
-unchanged until the replay path has serving evidence.
+## Current implementation and reproduction
+
+The local SGLang checkout at `../../sglang` (relative to the InferenceX
+repository root) is not required by the regular benchmark client. The
+replay engine work targets SGLang **v0.5.10**, commit
+`1519acf37c23f2189adb93f57ca9cd2db1bebf18`, matching the initial `gpu6`
+installation. `experimental/token_replay/sglang-v0.5.10.patch` is a generated
+distribution of that checkout's changes. Apply it to that exact release
+with `git apply --check` before `git apply`; later engine releases need a
+separate port and serving validation.
+
+`SamplingParams.replay_token_ids` validates vocabulary bounds, output
+length, and stopping behavior. The tokenizer rejects speculative,
+multimodal, embedding-input, and custom-logit-processor combinations.
+`TokenReplayBatch` stages a padded ID table at batch admission and keeps
+rows aligned during filtering and merging. A Triton kernel overwrites
+sampled IDs using the actual model position before logprob attachment
+and scheduler handoff. No per-token client round trip is introduced.
+Padding uses memory proportional to batch size times the longest response;
+merge/filter and staging costs still need to be measured for long traces.
+
+The client accepts JSONL with exactly these fields per turn:
+
+```json
+{"session_id":"example","input_ids":[1,2],"output_ids":[3,4],"delay_seconds":0}
+```
+
+Those IDs illustrate the schema only. Use a trace generated with the
+served model's exact tokenizer and chat template. `input_ids` is the full
+prompt at each turn. `delay_seconds` is an end-to-start delay (or initial
+delay for the first turn). File order defines order within a session.
+Different sessions are independent and can overlap; fork/join dependencies
+are **not implemented** by this client. It is an unofficial experimental
+path, not an AgentX-compatible score submission.
+
+For a patched server configured with `skip_tokenizer_init=True` so it
+returns output IDs, run from `inferencex-e2e`:
+
+```bash
+python3 -m infx.bench token-replay \
+  --url http://127.0.0.1:8000 --trace recorded-trace.jsonl \
+  --output replay-results.json --concurrency 1 --timeout 120 --seed 42
+```
+
+Server deployment remains the responsibility of `python -m infx.launch`
+and its caller-supplied configuration. The client sends no cache-repair
+requests, verifies every returned ID, and reports whole-request latency
+including prefill. It does not report streaming TTFT or decode-only
+throughput. Seed 42 controls configured pseudorandom choices, not OS
+scheduling or wall-clock reproducibility.
+
+`experimental/token_replay/check_engine.py` is a real-engine verification
+program, not a server launcher. Run it with the patched SGLang importable
+and compatible dependencies:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python experimental/token_replay/check_engine.py \
+  --model /path/to/model --trace-output recorded-trace.jsonl
+```
+
+It checks validation, the GPU replacement kernel, emitted IDs and
+logprob IDs, mixed batches, internal EOS, next-turn cache reuse, and
+cached-versus-fresh generation. It exports a two-turn model-generated
+trace. Its alternating timing samples are a small correctness workload,
+not a throughput or MoE load-balance claim.
+
+Real-engine and overhead verification remain pending. Existing official
+benchmark recipes remain unchanged until the replay path has serving
+evidence.
