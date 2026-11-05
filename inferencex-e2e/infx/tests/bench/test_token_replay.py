@@ -34,3 +34,24 @@ def serving_endpoint():
         server.shutdown()
         server.server_close()
         thread.join()
+
+
+def test_replay_client_sends_full_tokens_and_keeps_turn_order(tmp_path, serving_endpoint):
+    url, received = serving_endpoint
+    rows = [
+        {"session_id": "a", "input_ids": [1, 2], "output_ids": [8, 9], "delay_seconds": 0},
+        {"session_id": "a", "input_ids": [1, 2, 8, 9, 3], "output_ids": [7], "delay_seconds": 0},
+    ]
+    source, output = tmp_path / "trace.jsonl", tmp_path / "result.json"
+    source.write_text("\n".join(json.dumps(row) for row in rows))
+    assert main(["--url", url, "--trace", str(source), "--output", str(output),
+                 "--concurrency", "2", "--timeout", "10", "--seed", "42"]) == 0
+    assert received == [
+        {"input_ids": row["input_ids"], "sampling_params": {
+            "temperature": 0, "ignore_eos": True, "sampling_seed": 42,
+            "max_new_tokens": len(row["output_ids"]), "replay_token_ids": row["output_ids"],
+        }} for row in rows
+    ]
+    report = json.loads(output.read_text())
+    assert [r["output_tokens"] for r in report["results"]] == [2, 1]
+    assert report["unofficial"] is True
