@@ -12,6 +12,7 @@ COMMANDS = {
     "wait": "infx.bench.server",
     "fixed-seq": "infx.bench.fixed_seq",
     "agentic": "infx.bench.agentic.run",
+    "token-replay": "infx.bench.token_replay",
     "eval": "infx.bench.eval",
     "al-gate": "infx.bench.al_gate",
 }
