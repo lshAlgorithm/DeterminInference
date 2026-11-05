@@ -32,6 +32,24 @@ def check_validation() -> None:
         raise AssertionError(f"invalid replay accepted: {change}")
 
 
+def check_completion_adapter() -> None:
+    from sglang.srt.entrypoints.openai.protocol import CompletionRequest
+    from sglang.srt.entrypoints.openai.serving_completions import OpenAIServingCompletion
+
+    request = CompletionRequest(
+        prompt=[1, 2], max_tokens=2, ignore_eos=True, replay_token_ids=[8, 9],
+    )
+    adapter = object.__new__(OpenAIServingCompletion)
+    params = adapter._build_sampling_params(request)
+    assert params["replay_token_ids"] == [8, 9]
+    SamplingParams(**params).verify(10)
+    try:
+        CompletionRequest(prompt=[1], replay_token_ids=[True])
+    except ValueError:
+        return
+    raise AssertionError("completion protocol accepted a boolean token ID")
+
+
 def check_kernel() -> None:
     requests = [
         SimpleNamespace(
@@ -177,6 +195,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     check_validation()
     check_kernel()
+    check_completion_adapter()
     report = check_engine(args.model)
     args.trace_output.write_text(
         "\n".join(json.dumps(row) for row in report.pop("trace_rows")) + "\n"
