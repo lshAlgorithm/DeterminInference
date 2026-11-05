@@ -259,3 +259,44 @@ check with CUDA graphs and default overlapping scheduling enabled:
 EOS, and cached-versus-fresh agreement. See `engine-check-compact.log`.
 This rerun confirms the tested behavior after storage changes; it does not
 extend coverage to speculative decoding, MoE, or the HTTP streaming path.
+
+
+## HTTP and device-timing checks
+
+The SGLang patch includes `python/sglang/test/test_token_replay_http.py`,
+a real-server unittest fixture. It uses the existing local model and
+loopback port, then cleans up its own server process. Set
+`REPLAY_TEST_MODEL`, `REPLAY_TEST_URL`, and `CUDA_VISIBLE_DEVICES`, with
+the patched package on `PYTHONPATH`, and run the file with the compatible
+Python environment. This fixture is independent of InferenceX deployment;
+benchmark deployment still uses `python -m infx.launch`.
+
+`experimental/token_replay/profile_kernel.py` requires
+`REPLAY_PROFILE_MODULE` (normally `sglang.srt.sampling.token_replay`).
+For the padded control, export `sampling/token_replay.py` from SGLang
+commit `43bfa5b` as module `replay_padded_baseline`. It verifies replacement
+outputs, then measures 100 kernels per CUDA graph with CUDA events, two
+warmup graph replays and ten measured replays, at batch sizes 1/32/128/512.
+This measures device execution in a graph, not the uncaptured production
+host dispatch, and should not be subtracted directly from request latency.
+
+
+HTTP verification passed: eight requests at concurrency four, each returning
+11 recorded tokens over 12 SSE chunks, matching token text/logprobs and
+usage counts, followed by exact native output IDs and 18 cached tokens.
+The first attempt failed because the new test used OpenAI `seed` inside
+native sampling parameters; it was corrected to `sampling_seed`. Both
+failure and passing logs are preserved. This is real HTTP/SSE evidence,
+not an official AgentX harness benchmark.
+
+CUDA graph device-time medians on RTX 4090 (microseconds per replacement):
+
+| Batch size | Padded | Compact |
+| --- | ---: | ---: |
+| 1 | 0.992 | 0.983 |
+| 32 | 1.085 | 1.096 |
+| 128 | 1.137 | 1.155 |
+| 512 | 1.154 | 1.167 |
+
+The storage optimization primarily addresses staging and batch mutations;
+these measurements do not demonstrate a universal decode speedup.
