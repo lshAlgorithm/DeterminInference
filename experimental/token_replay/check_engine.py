@@ -7,7 +7,23 @@ from types import SimpleNamespace
 import sglang as sgl
 import torch
 from sglang.srt.sampling.token_replay import TokenReplayBatch
+from sglang.srt.sampling.sampling_params import SamplingParams
 from transformers import AutoTokenizer
+
+
+def check_validation() -> None:
+    valid = {"max_new_tokens": 2, "ignore_eos": True, "replay_token_ids": [1, 2]}
+    SamplingParams(**valid).verify(10)
+    for change in (
+        {"replay_token_ids": []}, {"replay_token_ids": [1, 10]},
+        {"replay_token_ids": [True, 2]}, {"max_new_tokens": 3},
+        {"ignore_eos": False}, {"stop": ["end"]}, {"regex": "a"},
+    ):
+        try:
+            SamplingParams(**(valid | change)).verify(10)
+        except ValueError:
+            continue
+        raise AssertionError(f"invalid replay accepted: {change}")
 
 
 def check_kernel() -> None:
@@ -138,5 +154,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True)
     args = parser.parse_args()
+    check_validation()
     check_kernel()
     print(json.dumps(check_engine(args.model), indent=2))
