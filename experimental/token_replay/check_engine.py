@@ -163,5 +163,7 @@ if __name__ == "__main__":
     check_validation()
     check_kernel()
     report = check_engine(args.model)
-    args.trace_output.write_text("\n".join(json.dumps(row) for row in report.pop("trace_rows")) + "\n")
+    args.trace_output.write_text(
+        "\n".join(json.dumps(row) for row in report.pop("trace_rows")) + "\n"
+    )
     print(json.dumps(report, indent=2))
