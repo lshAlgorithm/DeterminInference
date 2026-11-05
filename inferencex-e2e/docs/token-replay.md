@@ -104,12 +104,15 @@ separate port and serving validation.
 `SamplingParams.replay_token_ids` validates vocabulary bounds, output
 length, and stopping behavior. The tokenizer rejects speculative,
 multimodal, embedding-input, and custom-logit-processor combinations.
-`TokenReplayBatch` stages a padded ID table at batch admission and keeps
-rows aligned during filtering and merging. A Triton kernel overwrites
+`TokenReplayBatch` stages a packed ID buffer at batch admission and keeps
+per-request address/length/prompt metadata aligned during filtering and merging. A Triton kernel overwrites
 sampled IDs using the actual model position before logprob attachment
 and scheduler handoff. No per-token client round trip is introduced.
-Padding uses memory proportional to batch size times the longest response;
-merge/filter and staging costs still need to be measured for long traces.
+Token storage is proportional to the sum of recorded response lengths.
+Filtering and merging copy only metadata and retain tensor views as owners,
+so an admission buffer is released when its last live row and in-flight
+batch reference disappear. One short surviving row can retain its entire
+admission buffer; no claim of per-request allocation reclamation is made.
 
 The client accepts JSONL with exactly these fields per turn:
 
@@ -227,3 +230,32 @@ request has `t`, `model`, `in`, `out`, `hash_ids`, `api_time`, `type`, and
 `ttft`, with no original token IDs. This observation concerns the sampled
 prefix only; it is not a full audit of the 1.85 GB corpus. Its hash/length
 metadata cannot recover original text or establish representative MoE routing.
+
+
+## Compact-storage optimization
+
+`profile_replay.py` compares the same seeded mixed-response cases on GPU0.
+The padded baseline is retained in `evidence/replay-profile-padded.log`;
+the compact result is in `evidence/replay-profile-compact.log`. With 128
+requests, one 32K response, other recorded responses of 128 tokens, and
+ordinary requests in every fourth row, 44,928 real tokens occupy 359,424
+bytes rather than 33,554,432 bytes. The compact metadata adds 3,072 bytes.
+Initial staging measured 3.37 ms versus 213.78 ms; median filter measured
+15.48 versus 69.71 microseconds, and merge 18.65 versus 252.79 microseconds.
+These are synchronized host timings, not device-kernel duration; staging
+is a single observation and operation samples are ten groups of twenty
+calls after two warmup groups. CPU/launch timing varies between runs.
+
+The 200-round `check_storage.py` test exercises real GPU replacements
+through randomized merge/filter/reorder operations, negative and past-end
+positions, ordinary rows, int32/int64 sampled outputs, and collection of
+filtered-out admission storage (seed 42). It passed. Scheduler overlap
+retains the model-worker batch, whose immutable sampling-info copy owns
+the replay views; filtering does not mutate an in-flight metadata table.
+
+The compact implementation also passed the real Qwen2.5-7B Int4 engine
+check with CUDA graphs and default overlapping scheduling enabled:
+24 exact output/logprob token IDs, 34 cached tokens, mixed lengths/internal
+EOS, and cached-versus-fresh agreement. See `engine-check-compact.log`.
+This rerun confirms the tested behavior after storage changes; it does not
+extend coverage to speculative decoding, MoE, or the HTTP streaming path.
