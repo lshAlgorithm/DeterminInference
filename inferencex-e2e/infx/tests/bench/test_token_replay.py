@@ -65,3 +65,11 @@ def test_replay_loader_rejects_non_token_or_invalid_traces(tmp_path, change):
     source.write_text(json.dumps(row))
     with pytest.raises(InputError):
         load_sessions(source)
+
+
+def test_replay_stops_on_server_output_drift(serving_endpoint):
+    url, received = serving_endpoint
+    turns = [{"session_id": "a", "input_ids": [1, 2], "output_ids": [0], "delay_seconds": 0}]
+    with pytest.raises(InputError, match="output IDs do not match"):
+        replay_session(url, turns * 2, 10, 42)
+    assert len(received) == 1
