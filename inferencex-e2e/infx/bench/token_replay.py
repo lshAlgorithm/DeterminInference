@@ -47,26 +47,37 @@ def replay_session(url: str, turns: list[dict], timeout: float, seed: int) -> li
         payload = {
             "input_ids": turn["input_ids"],
             "sampling_params": {
-                "temperature": 0, "ignore_eos": True, "sampling_seed": seed,
+                "temperature": 0,
+                "ignore_eos": True,
+                "sampling_seed": seed,
                 "max_new_tokens": len(turn["output_ids"]),
                 "replay_token_ids": turn["output_ids"],
             },
         }
         request = urllib.request.Request(  # noqa: S310 — HTTP(S) validated above.
-            url.rstrip("/") + "/generate", data=json.dumps(payload).encode(),
-            headers={"Content-Type": "application/json"}, method="POST",
+            url.rstrip("/") + "/generate",
+            data=json.dumps(payload).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST",
         )
         start = time.perf_counter()
         with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
             output = json.load(response)
         elapsed = time.perf_counter() - start
         if output.get("output_ids") != turn["output_ids"]:
-            raise InputError(f"session {turn['session_id']} turn {index}: output IDs do not match trace")
-        results.append({
-            "session_id": turn["session_id"], "turn": index,
-            "input_tokens": len(turn["input_ids"]), "output_tokens": len(turn["output_ids"]),
-            "request_seconds": elapsed, "meta_info": output.get("meta_info", {}),
-        })
+            raise InputError(
+                f"session {turn['session_id']} turn {index}: output IDs do not match trace"
+            )
+        results.append(
+            {
+                "session_id": turn["session_id"],
+                "turn": index,
+                "input_tokens": len(turn["input_ids"]),
+                "output_tokens": len(turn["output_ids"]),
+                "request_seconds": elapsed,
+                "meta_info": output.get("meta_info", {}),
+            }
+        )
     return results
 
 
