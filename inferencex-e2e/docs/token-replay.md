@@ -63,6 +63,10 @@ lengths and preserve the original text. Even with real content, matching
 MoE routing across different models is not a valid expectation; the goal
 is representative routing for the model being measured.
 
+Token-exact replay fixes the sequence represented by KV entries. It does
+not make floating-point KV values or near-tied MoE routing decisions
+bitwise identical across batching strategies, kernels, or hardware.
+
 ## Verification and evidence still required
 
 - Exercise mixed forced and ordinary requests, batch reorder/removal,
