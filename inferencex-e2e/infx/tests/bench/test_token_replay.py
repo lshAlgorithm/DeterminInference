@@ -57,7 +57,16 @@ def test_replay_client_sends_full_tokens_and_keeps_turn_order(tmp_path, serving_
     assert report["unofficial"] is True
 
 
-@pytest.mark.parametrize("change", [{"hash_ids": [1]}, {"output_ids": []}, {"input_ids": [True]}, {"delay_seconds": -1}, {"delay_seconds": float("nan")}])
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"hash_ids": [1]},
+        {"output_ids": []},
+        {"input_ids": [True]},
+        {"delay_seconds": -1},
+        {"delay_seconds": float("nan")},
+    ],
+)
 def test_replay_loader_rejects_non_token_or_invalid_traces(tmp_path, change):
     row = {"session_id": "a", "input_ids": [1], "output_ids": [2], "delay_seconds": 0}
     row.update(change)
