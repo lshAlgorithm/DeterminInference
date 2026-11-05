@@ -64,3 +64,26 @@ def replay_session(url: str, turns: list[dict], timeout: float, seed: int) -> li
             "request_seconds": elapsed, "meta_info": output.get("meta_info", {}),
         })
     return results
+
+
+def main(argv: list[str]) -> int:
+    """Replay independent sessions with bounded concurrency and explicit inputs."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--url", required=True)
+    parser.add_argument("--trace", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--concurrency", type=int, required=True)
+    parser.add_argument("--timeout", type=float, required=True)
+    parser.add_argument("--seed", type=int, required=True)
+    args = parser.parse_args(argv)
+    if args.concurrency <= 0 or not math.isfinite(args.timeout) or args.timeout <= 0:
+        raise InputError("concurrency and timeout must be positive")
+    sessions = load_sessions(args.trace)
+    with ThreadPoolExecutor(max_workers=args.concurrency) as pool:
+        futures = [pool.submit(replay_session, args.url, turns, args.timeout, args.seed) for turns in sessions.values()]
+        results = [result for future in futures for result in future.result()]
+    args.output.write_text(json.dumps({
+        "unofficial": True, "seed": args.seed, "concurrency": args.concurrency,
+        "trace": str(args.trace), "results": results,
+    }, indent=2) + "\n")
+    return 0
