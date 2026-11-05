@@ -97,10 +97,15 @@ def export_agentx(sessions: dict[str, list[dict]], output: Path, model: str, see
                     "delay": 1000 * turn["delay_seconds"],
                     "output_length": len(turn["output_ids"]),
                     "payload": {
-                        "model": model, "prompt": turn["input_ids"],
-                        "max_tokens": len(turn["output_ids"]), "ignore_eos": True,
-                        "replay_token_ids": turn["output_ids"], "temperature": 0, "seed": seed,
-                        "stream": True, "stream_options": {"include_usage": True},
+                        "model": model,
+                        "prompt": turn["input_ids"],
+                        "max_tokens": len(turn["output_ids"]),
+                        "ignore_eos": True,
+                        "replay_token_ids": turn["output_ids"],
+                        "temperature": 0,
+                        "seed": seed,
+                        "stream": True,
+                        "stream_options": {"include_usage": True},
                     },
                 }
                 destination.write(json.dumps(row) + "\n")
