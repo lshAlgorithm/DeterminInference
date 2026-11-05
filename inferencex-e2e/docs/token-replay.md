@@ -55,6 +55,16 @@ Precomputing embeddings is therefore not a prerequisite: staging token
 IDs and using the model's normal embedding lookup preserves the usual
 execution path.
 
+```mermaid
+flowchart LR
+    A["Forward: consume current input and write its KV"] --> B["Normal sampler"]
+    B --> C["Replace sampled ID with recorded next ID"]
+    T["Recorded IDs staged on GPU"] --> C
+    C --> D["Logprobs and scheduler token history"]
+    D --> E["Next forward input"]
+    E --> A
+```
+
 Recorded token IDs are not portable across tokenizers. When replaying
 text captured from a different model, tokenize it with the served model
 before measurement and recompute token counts and shared prefixes. Source
