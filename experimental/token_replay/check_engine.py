@@ -147,8 +147,18 @@ def check_engine(model: str) -> dict:
             "cached_vs_fresh": "passed",
             "request_seconds_including_prefill": timings,
             "trace_rows": [
-                {"session_id": "sky", "input_ids": prompt, "output_ids": recorded, "delay_seconds": 0},
-                {"session_id": "sky", "input_ids": followup, "output_ids": fresh["output_ids"], "delay_seconds": 0},
+                {
+                    "session_id": "sky",
+                    "input_ids": prompt,
+                    "output_ids": recorded,
+                    "delay_seconds": 0,
+                },
+                {
+                    "session_id": "sky",
+                    "input_ids": followup,
+                    "output_ids": fresh["output_ids"],
+                    "delay_seconds": 0,
+                },
             ],
         }
     finally:
