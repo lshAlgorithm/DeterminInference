@@ -1,5 +1,19 @@
 # Token-exact trajectory replay (unofficial)
 
+The implementation and optimization are verified on SGLang v0.5.10 with
+Qwen2.5-7B-Instruct-GPTQ-Int4 on GPU6's RTX 4090 GPU0. Recorded IDs replace
+sampled IDs on-device before scheduler handoff and the next forward pass.
+Packed storage removes longest-response padding; batch changes move only
+metadata, and ordinary-only batches stop dispatching the replay kernel.
+
+In the measured 128-request mixed-length case, token storage fell from
+32 MiB to 351 KiB (plus 3 KiB metadata), initial staging from 213.78 to
+3.37 ms, and median merge from 252.79 to 18.65 microseconds. Device kernel
+time remains approximately 1 microsecond; no general decode speedup is
+claimed. Real-engine, 200-round mutation/lifetime, concurrent HTTP/SSE,
+and real two-turn AgentX harness checks passed. The scope excludes vLLM,
+speculative decoding, fork/join scheduling, and MoE routing validation.
+
 ## Source boundary
 
 The supplied archive identifies source snapshot
@@ -77,7 +91,7 @@ Token-exact replay fixes the sequence represented by KV entries. It does
 not make floating-point KV values or near-tied MoE routing decisions
 bitwise identical across batching strategies, kernels, or hardware.
 
-## Verification and evidence still required
+## Verification contract
 
 - Exercise mixed forced and ordinary requests, batch reorder/removal,
   prompt prefill, EOS, and variable response lengths.
@@ -220,8 +234,8 @@ client above instead requires `skip_tokenizer_init=True`.
 `experimental/token_replay/check_harness.py` passed against the actual
 PyPI `agentx-harness==1.0.13` loader: two turns, original token payloads,
 750 ms delay, full-history context mode, and no synthetic prompt generation.
-This verifies import, not the complete streaming benchmark or an official
-AgentX workload score. The exported format currently represents independent
+This loader check verifies import. The real two-turn harness run below
+additionally verifies HTTP and exports; neither is an official AgentX score. The exported format currently represents independent
 sessions with ordered turns, not fork/join dependencies.
 
 A bounded 65,536-byte range read of the public
@@ -287,7 +301,7 @@ usage counts, followed by exact native output IDs and 18 cached tokens.
 The first attempt failed because the new test used OpenAI `seed` inside
 native sampling parameters; it was corrected to `sampling_seed`. Both
 failure and passing logs are preserved. This is real HTTP/SSE evidence,
-not an official AgentX harness benchmark.
+not an official AgentX score submission.
 
 CUDA graph device-time medians on RTX 4090 (microseconds per replacement):
 
@@ -320,3 +334,43 @@ It runs the real `aiperf profile` CLI with the exported Mooncake payload,
 completion streaming, concurrency 1, seed 42, and two requests. Harness
 artifacts must be inspected for errors and actual outputs; process exit
 alone is insufficient evidence of replay success.
+
+
+## Verified real harness run
+
+`agentx-harness==1.0.13` ran against the patched HTTP server using the
+exported two-turn, model-generated trace. `harness-real-02` completed with
+two HTTP 200 responses, zero request error rate, 24 output tokens per
+turn, exact exported response text, and turn indices 0 then 1. The raw
+payload IDs match the source prompt and recorded response IDs exactly;
+SSE text matches the outputs export, and turn 1 starts after turn 0 ends.
+`check_harness_artifacts.py` verifies those assertions against preserved
+files without a running server.
+
+Evidence is in `experimental/token_replay/evidence/`:
+`replay-harness-real-02.log`, `harness-real-02-raw.jsonl`,
+`harness-real-02-outputs.json`, `harness-real-02-metrics.json`, and
+`harness-artifact-check.log`. The isolated harness dependency versions
+are frozen in `harness-requirements.txt`. The first run was rejected
+before requests because the CLI requires a positive warmup count;
+omitting that option selects no harness warmup. Its log is retained.
+
+Reproduce against the same model/environment by running the SGLang test:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 \
+REPLAY_TEST_MODEL=/path/to/Qwen2.5-7B-Instruct-GPTQ-Int4 \
+REPLAY_TEST_URL=http://127.0.0.1:18942 \
+REPLAY_HARNESS_BIN=/path/to/harness-env/bin/aiperf \
+REPLAY_HARNESS_TRACE=/path/to/exported-agentx-token.jsonl \
+REPLAY_HARNESS_OUTPUT=/path/to/new-artifact-directory \
+python python/sglang/test/test_token_replay_http.py TestTokenReplayHTTP.test_harness
+```
+
+The serving environment must provide the patched package and compatible
+Torch/CUDA dependencies described above. The test starts and cleans up
+its own loopback server. The harness run is a correctness integration
+check with no harness warmup: its two-request latency/throughput figures
+must not be used as performance estimates. Cache-reporting was not enabled
+in the OpenAI usage extension; prefix reuse is established by the native
+engine/HTTP follow-up checks, not by this harness's cache metrics.
