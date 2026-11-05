@@ -28,7 +28,8 @@ def profile_replay() -> dict:
         batch = TokenReplayBatch.from_requests(requests, 'cuda')
         torch.cuda.synchronize()
         staging_ms = (time.perf_counter() - start) * 1000
-        indices = torch.arange(size - 1, -1, -1, device='cuda')
+        keep_indices = list(range(size - 1, -1, -1))
+        indices = torch.tensor(keep_indices, device='cuda')
         sampled = torch.full((size,), -2, device='cuda', dtype=torch.int32)
         positions = torch.full((size,), 31, device='cuda', dtype=torch.int64)
         batch.apply(sampled, positions)
@@ -44,7 +45,7 @@ def profile_replay() -> dict:
                     if operation == 'apply':
                         batch.apply(sampled, positions)
                     elif operation == 'filter':
-                        filtered = batch.filter(indices)
+                        filtered = batch.filter(indices, keep_indices)
                     else:
                         merged = TokenReplayBatch.merge(batch, None, size, size, 'cuda')
                 torch.cuda.synchronize()
@@ -55,7 +56,7 @@ def profile_replay() -> dict:
         results.append({
             'batch_size': size, 'max_response': width,
             'real_token_count': sum(len(r.sampling_params.replay_token_ids or []) for r in requests),
-            'token_table_bytes': batch.tokens.numel() * batch.tokens.element_size(),
+            'token_table_bytes': sum(t.numel() * t.element_size() for t in batch.tokens if t is not None),
             'staging_ms': staging_ms, 'operations': timings,
         })
     return {'seed': 42, 'gpu': torch.cuda.get_device_name(), 'timing': 'synchronized host wall time, 20 calls/sample, 2 warmup + 10 measured samples', 'results': results}
