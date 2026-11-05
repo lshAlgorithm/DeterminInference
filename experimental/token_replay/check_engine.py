@@ -2,9 +2,33 @@ import argparse
 import json
 import math
 import time
+from types import SimpleNamespace
 
 import sglang as sgl
+import torch
+from sglang.srt.sampling.token_replay import TokenReplayBatch
 from transformers import AutoTokenizer
+
+
+def check_kernel() -> None:
+    requests = [
+        SimpleNamespace(origin_input_ids=[1] * 4, sampling_params=SimpleNamespace(replay_token_ids=[11, 12, 13])),
+        SimpleNamespace(origin_input_ids=[1] * 7, sampling_params=SimpleNamespace(replay_token_ids=None)),
+        SimpleNamespace(origin_input_ids=[1] * 5, sampling_params=SimpleNamespace(replay_token_ids=[21, 22])),
+    ]
+    batch = TokenReplayBatch.from_requests(requests, "cuda")
+    sampled = torch.tensor([99, 98, 97], device="cuda", dtype=torch.int32)
+    batch.apply(sampled, torch.tensor([3, 6, 5], device="cuda"))
+    assert sampled.tolist() == [11, 98, 22]
+    reordered = batch.filter(torch.tensor([2, 0], device="cuda"))
+    merged = TokenReplayBatch.merge(None, reordered, 1, 2, "cuda")
+    sampled = torch.tensor([90, 91, 92], device="cuda")
+    merged.apply(sampled, torch.tensor([100, 4, 5], device="cuda"))
+    assert sampled.tolist() == [90, 21, 13]
+    reverse = TokenReplayBatch.merge(reordered, None, 2, 1, "cuda")
+    sampled = torch.tensor([90, 91, 92], device="cuda")
+    reverse.apply(sampled, torch.tensor([5, 4, 100], device="cuda"))
+    assert sampled.tolist() == [22, 12, 92]
 
 
 def check_engine(model: str) -> dict:
@@ -72,4 +96,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True)
     args = parser.parse_args()
+    check_kernel()
     print(json.dumps(check_engine(args.model), indent=2))
