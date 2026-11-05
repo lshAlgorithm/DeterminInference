@@ -31,7 +31,8 @@ def check_storage() -> dict:
         batch = TokenReplayBatch.merge(batch, other, len(expected) - len(incoming), len(incoming), 'cuda')
         del other
         keep = rng.sample(range(len(expected)), min(16, len(expected)))
-        batch = batch.filter(torch.tensor(keep, device='cuda'), keep)
+        if batch is not None:
+            batch = batch.filter(torch.tensor(keep, device='cuda'), keep)
         expected = [expected[i] for i in keep]
         positions, outputs = [], []
         for prompt, sequence in expected:
@@ -39,7 +40,8 @@ def check_storage() -> dict:
             positions.append(prompt - 1 + step)
             outputs.append(sequence[step] if sequence is not None and 0 <= step < len(sequence) else -7)
         sampled = torch.full((len(expected),), -7, device='cuda', dtype=torch.int32 if iteration % 2 else torch.int64)
-        batch.apply(sampled, torch.tensor(positions, device='cuda'))
+        if batch is not None:
+            batch.apply(sampled, torch.tensor(positions, device='cuda'))
         assert sampled.tolist() == outputs, iteration
         if iteration % 20 == 0:
             gc.collect()
