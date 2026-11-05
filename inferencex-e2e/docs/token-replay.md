@@ -55,6 +55,14 @@ Precomputing embeddings is therefore not a prerequisite: staging token
 IDs and using the model's normal embedding lookup preserves the usual
 execution path.
 
+Recorded token IDs are not portable across tokenizers. When replaying
+text captured from a different model, tokenize it with the served model
+before measurement and recompute token counts and shared prefixes. Source
+block hashes cannot simultaneously guarantee identical target-token
+lengths and preserve the original text. Even with real content, matching
+MoE routing across different models is not a valid expectation; the goal
+is representative routing for the model being measured.
+
 ## Verification and evidence still required
 
 - Exercise mixed forced and ordinary requests, batch reorder/removal,
