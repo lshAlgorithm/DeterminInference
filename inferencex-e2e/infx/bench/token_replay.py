@@ -88,16 +88,24 @@ def replay_session(url: str, turns: list[dict], timeout: float, seed: int) -> li
 def main(argv: list[str]) -> int:
     """Replay independent sessions with bounded concurrency and explicit inputs."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--url", required=True)
+    parser.add_argument("--url")
     parser.add_argument("--trace", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--concurrency", type=int, required=True)
-    parser.add_argument("--timeout", type=float, required=True)
+    parser.add_argument("--concurrency", type=int)
+    parser.add_argument("--timeout", type=float)
     parser.add_argument("--seed", type=int, required=True)
+    parser.add_argument("--agentx-model")
     args = parser.parse_args(argv)
+    if args.seed < 0:
+        raise InputError("seed must be nonnegative")
+    sessions = load_sessions(args.trace)
+    if args.agentx_model is not None:
+        export_agentx(sessions, args.output, args.agentx_model, args.seed)
+        return 0
+    if args.url is None or args.concurrency is None or args.timeout is None:
+        raise InputError("native replay requires url, concurrency, and timeout")
     if args.concurrency <= 0 or not math.isfinite(args.timeout) or args.timeout <= 0:
         raise InputError("concurrency and timeout must be positive")
-    sessions = load_sessions(args.trace)
     with ThreadPoolExecutor(max_workers=args.concurrency) as pool:
         futures = [
             pool.submit(replay_session, args.url, turns, args.timeout, args.seed)
