@@ -106,3 +106,20 @@ def test_replay_stops_on_server_output_drift(serving_endpoint):
     with pytest.raises(InputError, match="output IDs do not match"):
         replay_session(url, turns * 2, 10, 42)
     assert len(received) == 1
+
+
+def test_export_preserves_token_payloads_and_converts_delay_units(tmp_path):
+    source, output = tmp_path / "trace.jsonl", tmp_path / "agentx.jsonl"
+    source.write_text(json.dumps({
+        "session_id": "a", "input_ids": [1, 2], "output_ids": [8, 9], "delay_seconds": 0.75,
+    }))
+    assert main(["--trace", str(source), "--output", str(output), "--seed", "42",
+                 "--agentx-model", "served-model"]) == 0
+    row = json.loads(output.read_text())
+    assert row["delay"] == 750
+    assert row["session_id"] == "a"
+    assert row["output_length"] == 2
+    assert row["payload"]["prompt"] == [1, 2]
+    assert row["payload"]["replay_token_ids"] == [8, 9]
+    assert row["payload"]["model"] == "served-model"
+    assert row["payload"]["stream_options"] == {"include_usage": True}
