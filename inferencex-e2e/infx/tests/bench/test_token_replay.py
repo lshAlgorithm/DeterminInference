@@ -55,3 +55,13 @@ def test_replay_client_sends_full_tokens_and_keeps_turn_order(tmp_path, serving_
     report = json.loads(output.read_text())
     assert [r["output_tokens"] for r in report["results"]] == [2, 1]
     assert report["unofficial"] is True
+
+
+@pytest.mark.parametrize("change", [{"hash_ids": [1]}, {"output_ids": []}, {"input_ids": [True]}, {"delay_seconds": -1}, {"delay_seconds": float("nan")}])
+def test_replay_loader_rejects_non_token_or_invalid_traces(tmp_path, change):
+    row = {"session_id": "a", "input_ids": [1], "output_ids": [2], "delay_seconds": 0}
+    row.update(change)
+    source = tmp_path / "trace.jsonl"
+    source.write_text(json.dumps(row))
+    with pytest.raises(InputError):
+        load_sessions(source)
