@@ -12,9 +12,18 @@ from transformers import AutoTokenizer
 
 def check_kernel() -> None:
     requests = [
-        SimpleNamespace(origin_input_ids=[1] * 4, sampling_params=SimpleNamespace(replay_token_ids=[11, 12, 13])),
-        SimpleNamespace(origin_input_ids=[1] * 7, sampling_params=SimpleNamespace(replay_token_ids=None)),
-        SimpleNamespace(origin_input_ids=[1] * 5, sampling_params=SimpleNamespace(replay_token_ids=[21, 22])),
+        SimpleNamespace(
+            origin_input_ids=[1] * 4,
+            sampling_params=SimpleNamespace(replay_token_ids=[11, 12, 13]),
+        ),
+        SimpleNamespace(
+            origin_input_ids=[1] * 7,
+            sampling_params=SimpleNamespace(replay_token_ids=None),
+        ),
+        SimpleNamespace(
+            origin_input_ids=[1] * 5,
+            sampling_params=SimpleNamespace(replay_token_ids=[21, 22]),
+        ),
     ]
     batch = TokenReplayBatch.from_requests(requests, "cuda")
     sampled = torch.tensor([99, 98, 97], device="cuda", dtype=torch.int32)
