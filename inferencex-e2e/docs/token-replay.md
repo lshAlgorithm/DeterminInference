@@ -142,6 +142,27 @@ cached-versus-fresh generation. It exports a two-turn model-generated
 trace. Its alternating timing samples are a small correctness workload,
 not a throughput or MoE load-balance claim.
 
+## Validation status
+
+- Client tests: 7 passed, including real local HTTP transport, exact
+  request fields, per-session order, invalid input, and output drift.
+- Container-side benchmark tests: 194 passed, 2 skipped.
+- InferenceX lint and format checks passed.
+- Full macOS suite after restoring the original `srt-slurm` gitlink:
+  3201 passed, 19 failed, 2 skipped. Failures involve process-group
+  permission restrictions, copied Python executables missing
+  `libpython3.12.dylib`, and a CI fixture writing
+  `/changelog_metadata.json` on a read-only root filesystem.
+- On `gpu6`, vocabulary/stopping validation and the real GPU kernel's
+  mixed, reordered, and filtered batches passed. This does not prove
+  model KV alignment.
+- The preexisting server environment failed to import `sgl_kernel`:
+  PyTorch 2.10.0 did not match SGLang v0.5.10's pinned PyTorch 2.9.1.
+  A separate system-site-packages virtual environment now imports the
+  kernel with PyTorch 2.9.1+cu128 and matching torchvision/torchaudio.
+  Its unchanged cuDNN, cuSPARSELt, and NCCL libraries are linked from the
+  original environment so native-library lookup can find them.
+
+Logs are stored under `experimental/token_replay/evidence/` with Git LFS.
 Real-engine and overhead verification remain pending. Existing official
-benchmark recipes remain unchanged until the replay path has serving
-evidence.
+benchmark recipes remain unchanged until the replay path has serving evidence.
