@@ -24,7 +24,7 @@ def export_table(summary: dict, output: Path) -> None:
                 row[key+'_mean'+('_tokens_per_second' if key.endswith('per_user') else '_ms')] = values.get('mean')
             for metric, field, statistic in [('sglang:evicted_tokens', 'evicted_tokens_phase_total', 'total'), ('sglang:num_retractions', 'retractions_phase_total', 'sum')]:
                 series = data['server_metrics'].get(metric)
-                row[field] = sum(item['stats'][statistic] for item in series) if series is not None else None
+                row[field] = sum(item['stats'][statistic] for item in series) if series else None
             residency = data['cache_residency']
             row['cache_residency_sample_count'] = residency['sample_count']
             metrics = residency['sampled_metrics'] or {}
