@@ -117,3 +117,40 @@ def qualify_session(row: dict[str, Any], tokenizer: Any) -> tuple[list[dict[str,
         "selected_span_indexes": [request["source_span_index"] for request in valid],
         "reason": "selected" if valid else "no_continuous_valid_window_of_four",
     }
+
+
+def make_weka(session_id: str, requests: list[dict[str, Any]], model: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    origin = requests[0]["start"]
+    previous: dict[str, Any] | None = None
+    records = []
+    provenance = []
+    for request in requests:
+        input_ids, output_ids = request["input_ids"], request["output_ids"]
+        records.append({
+            "type": "s",
+            "t": request["start"] - origin,
+            "model": model,
+            "in": len(input_ids),
+            "out": len(output_ids),
+            "hash_ids": [],
+            "input_ids": input_ids,
+            "output_ids": output_ids,
+            "api_time": request["end"] - request["start"],
+            "think_time": max(0.0, request["start"] - previous["end"]) if previous else 0.0,
+        })
+        provenance.append({
+            "source_span_index": request["source_span_index"],
+            "source_model": request["source_model"],
+            "input_tokens": len(input_ids),
+            "output_tokens": len(output_ids),
+            "previous_prompt_lcp": common_prefix(previous["input_ids"], input_ids) if previous else 0,
+            "previous_prompt_response_lcp": common_prefix(previous["input_ids"] + previous["output_ids"], input_ids) if previous else 0,
+        })
+        previous = request
+    return {
+        "id": session_id,
+        "models": [model],
+        "block_size": 1,
+        "hash_id_scope": "local",
+        "requests": records,
+    }, provenance
