@@ -97,3 +97,12 @@ The original methodology-level goal remains incomplete until those
 comparisons support it. The completed engineering work is useful and
 aligned, but it should not be presented as proving that InferenceX now
 measures system performance more accurately.
+
+
+## Source and evidence pointers
+
+- [Replacement kernel and ownership](../../../sglang/python/sglang/srt/sampling/token_replay.py); [sampler insertion point](../../../sglang/python/sglang/srt/layers/sampler.py).
+- [Original AgentX command construction](../infx/bench/agentic/replay.py); [experimental client/exporter](../infx/bench/token_replay.py).
+- [Real-engine correctness and timing inputs](../../experimental/token_replay/check_engine.py); [batch-operation microbenchmark](../../experimental/token_replay/profile_replay.py); [device-time measurement](../../experimental/token_replay/profile_kernel.py).
+- [Preserved engine evidence](../../experimental/token_replay/evidence/engine-check-compact.log); [harness artifact checks](../../experimental/token_replay/check_harness_artifacts.py).
+- [Original snapshot/cache-pressure warmup](../../../agentx-harness/src/aiperf/timing/strategies/agentic_replay.py); [public Weka schema](../../../agentx-harness/src/aiperf/dataset/loader/weka_trace_models.py).

@@ -1,5 +1,10 @@
 # Token-exact trajectory replay (unofficial)
 
+**Delivery status:** the token-replay prototype is implemented and tested;
+the original InferenceX benchmark-methodology objective is still incomplete.
+See [meeting alignment review](token-replay-meeting-review.md) for the
+requirement-by-requirement assessment and missing baseline comparison.
+
 The implementation and optimization are verified on SGLang v0.5.10 with
 Qwen2.5-7B-Instruct-GPTQ-Int4 on GPU6's RTX 4090 GPU0. Recorded IDs replace
 sampled IDs on-device before scheduler handoff and the next forward pass.
