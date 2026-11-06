@@ -127,6 +127,13 @@ def compare_moe(off: Path, on: Path | None) -> dict:
             perturbation[content] = {'on': recorded, 'relative_to_off_mean': {m: recorded[m]/statistics.mean(r[m] for r in reference)-1 for m in metrics},
                                      'scope': 'one recorder-on pass versus three earlier off passes; descriptive perturbation, no paired uncertainty or drift control'}
             routing[content] = aggregate_routing(json.loads((on/f'routing-{content}'/'routing.json').read_text()), len({k[0] for k in expected[content]}))
+            audit = json.loads((on/f'routing-{content}'/'coverage-audit.json').read_text())
+            if not audit['complete'] or audit['requests'] != len(expected[content]):
+                raise ValueError('raw recorder coverage audit incomplete')
+            counts = {phase: [layer['expert_counts'] for layer in layers] for phase, layers in routing[content]['phases'].items()}
+            if counts != audit['per_layer_expert_counts']:
+                raise ValueError('routing summary differs from audited raw counts')
+            routing[content]['coverage_audit'] = audit
         for phase in routing['real']['phases']:
             for real, synthetic in zip(routing['real']['phases'][phase], routing['synthetic']['phases'][phase], strict=True):
                 a, b = real['expert_counts'], synthetic['expert_counts']
