@@ -60,15 +60,15 @@ def measure_overhead(url: str, source: Path, output: Path) -> dict:
                 pair['arms'][mode]={'wall_seconds':wall,'batches':details}
             pair['overhead_fraction']=pair['arms']['recorded']['wall_seconds']/pair['arms']['generated']['wall_seconds']-1
             paired.append(pair)
-            if len(paired)>=3:
+            if len(paired) in (3, 5):
                 values=[p['overhead_fraction'] for p in paired]
                 mean=statistics.mean(values)
-                critical={3:4.302653,4:3.182446,5:2.776445}[len(values)]
+                critical={3:6.205347,5:3.495405}[len(values)]
                 half=critical*statistics.stdev(values)/math.sqrt(len(values))
-                condition['estimate']={'mean':mean,'ci95':[mean-half,mean+half],'pairs':len(values),'method':'paired relative wall-time mean with Student t interval','target_met':mean+half<=0.03}
+                condition['estimate']={'mean':mean,'ci95':[mean-half,mean+half],'pairs':len(values),'method':'paired relative wall-time mean; Bonferroni-adjusted Student t intervals for looks at n=3 and n=5; 95% simultaneous nominal coverage under t assumptions','target_met':mean+half<=0.03}
             output.write_text(json.dumps(report,indent=2))
             print(json.dumps({'concurrency':concurrency,'repeat':repeat,'overhead':pair['overhead_fraction'],'estimate':condition.get('estimate')}),flush=True)
-            if len(paired)>=3 and not condition['estimate']['ci95'][0]<=0.03<=condition['estimate']['ci95'][1]:
+            if len(paired)==3 and not condition['estimate']['ci95'][0]<=0.03<=condition['estimate']['ci95'][1]:
                 break
     report['complete']=True
     report['target_met']=all(c['estimate']['target_met'] for c in report['conditions'])
