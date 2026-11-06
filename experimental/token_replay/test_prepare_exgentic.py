@@ -25,3 +25,13 @@ def make_tokenizer():
         body = "".join("<" + message["role"] + ">" + message["content"] + "</>" for message in messages)
         return prefix + body + ("<assistant>" if add_generation_prompt else "")
     return SimpleNamespace(chat_template="test", apply_chat_template=render, encode=lambda text, **kwargs: list(map(ord, text)))
+
+
+class TestPreparation(unittest.TestCase):
+    def test_joint_encoding_and_bounds(self):
+        result = prepare.encode_span(make_span(), make_tokenizer())
+        self.assertEqual(result["output_ids"], list(map(ord, "answer</>")))
+        for text, reason in [("a" * 2049, "target_output_over_2048"), ("", None)]:
+            if reason:
+                with self.assertRaisesRegex(ValueError, reason):
+                    prepare.encode_span(make_span(text), make_tokenizer())
