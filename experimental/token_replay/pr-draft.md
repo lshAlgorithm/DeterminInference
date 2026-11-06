@@ -18,7 +18,12 @@ An identical-prompt A/B/A witness also exposed and verified the fix for a missin
 SGLang scheduler salt assignment. See the [meeting evidence](../../inferencex-e2e/docs/token-replay-meeting-review.md)
 and [raw acceptance archive](evidence/entry-evidence-20261106.tar.gz).
 
-The fixed real-content performance matrix and full MoE diagnostics are not yet
+A fixed32-prompt matched-output HTTP experiment met the scoped3% overhead target
+at concurrency1/4/8. The full308-request MoE recorder-off comparison found a
+synthetic-relative-to-real throughput difference of+0.2336% (95% interval
+[-0.0285%, +0.4958%]); it does not establish a throughput effect.
+
+The fixed real-content AgentX performance matrix and full MoE diagnostics are not yet
 complete. The acceptance fixture is synthetic and is not an original Weka score;
 Exgentic content is re-tokenized for the target model, with processed timing and
 no invented DAG. The available review is Codex-only: Claude-review was unavailable.

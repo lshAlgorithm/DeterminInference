@@ -3,8 +3,9 @@
 The original `agentx profile` route now accepts complete recorded token IDs,
 retains the AgentX scheduler, snapshot warmup, spawn/join and session isolation,
 and runs through the InferenceX result collector. The full performance study is
-still running. Neither the 3% overhead target nor an improvement in benchmark
-accuracy is established by the acceptance runs below.
+still incomplete. A fixed32-prompt HTTP mechanism experiment meets the scoped
+3% target below; workload-wide effects await the full AgentX matrix. Acceptance
+runs do not establish an improvement in benchmark accuracy.
 
 ## Implementation
 
@@ -90,7 +91,7 @@ or final-entry evidence. Their failures and pre-fix salt leak remain preserved.
 Capacity preflight used corrected Exgentic data, concurrency 8 and 120-second
 profiling admission windows. Both conditions completed with zero request errors.
 
-| KV capacity | Profiling requests | Cache hit fraction from server aggregate | Peak KV occupancy | Evicted tokens including warmup |
+| KV capacity | Profiling requests | Cache hit fraction from server aggregate | Peak non-evictable usage fraction | Evicted tokens including warmup |
 | --- | ---: | ---: | ---: | ---: |
 | 131072 | 232 | 0.91162 | 0.33547 | 138234 |
 | 16384 | 110 | 0.10060 | 0.99573 | 1202333 |
@@ -129,6 +130,40 @@ prompts, not the entire data population or all sampling policies. Retraction
 counters must also be zero before claiming identical computation. A completed
 measurement with `target_met=false` is a valid negative result.
 
+The completed `dense-overhead-02` measurement had zero retractions, exact output
+IDs and matched cached-token work in every batch. All three initial paired
+repetitions suffice under the prespecified adjusted intervals:
+
+| Concurrency | Mean additional HTTP wall time | Adjusted interval |
+| --- | ---: | ---: |
+| 1 | -0.0479% | [-0.9108%, 0.8150%] |
+| 4 | -0.0567% | [-0.5019%, 0.3886%] |
+| 8 | 0.0109% | [-0.6475%, 0.6693%] |
+
+Negative point estimates are measurement noise, not demonstrated speedups. This
+result concerns these fixed32 greedy prompts and the HTTP boundary, not the full
+AgentX workload or the data population. Maximum calculated replay payloads were
+2536/4120/8192 bytes per issued batch for concurrency1/4/8; those are token and
+metadata payload sizes, not measured incremental allocator or peak GPU memory.
+Raw results are in [dense-overhead-02.json](../../experimental/token_replay/evidence/dense-overhead-02.json).
+
+## Public Weka reference qualification
+
+The original public corpus has393 traces but no complete trace qualifies at16K:
+minimum required context is44048 and maximum996579. `weka-original-01` preserves
+that zero-eligible result. A separately labeled64K YaRN reference uses factor2,
+original context32768 and rope theta1000000; it is not part of the16K causal
+comparison. `weka-original-02` failed on missing rope parameters and `-03` reached
+warmup but failed FlashInfer JIT because the isolated CUDA include path lacked
+`curand.h`. Both failures are preserved.
+
+A scoped `CPATH` points at existing cuRAND headers and a project-specific
+FlashInfer cache isolates the rebuild. A fresh agent executed the documented
+seed42 top-k/top-p witness verbatim: actual kernel dispatch, valid sampled IDs
+and repeated-seed equality passed. No package upgrade was needed.
+`weka-original-04` is the new full public-route attempt; successful completion
+is required before the queued Dense matrix starts.
+
 ## MoE experiment protocol
 
 The BF16 Qwen1.5-MoE-A2.7B-Chat weights are fixed at revision
@@ -143,6 +178,15 @@ absent from the performance engine. Output IDs are checked exactly on every
 request, with request latency, client TTFT and cached-token counts retained.
 Service throughput divides output count by summed request wall time; it excludes
 flush, file writes and between-session gaps and is not whole-campaign throughput.
+
+The recorder-off full comparison completed all308 requests in each of six arms,
+with61931 output and1913941 input tokens per arm. Cached work also matches
+per request, totaling1757998 cached tokens per arm. Real-content service
+throughput was170.59–171.03 output tokens/s across both GPUs. Synthetic-relative-
+to-real paired throughput change was+0.2336%, with a three-pair95% t interval
+[-0.0285%, +0.4958%]; this does not establish a throughput difference. Token-
+weighted client TPOT changed-0.1275% [-0.1692%, -0.0858%], a small scoped timing
+observation that does not identify an expert-routing cause.
 
 Recorder-on runs and per-rank compute/communication diagnostics are separate.
 Recorder histograms are global and replicated across ranks: accumulate sessions
@@ -161,7 +205,7 @@ reviews remain provisional. No `claude-review` MCP tool was available, so no
 cross-family review or dual-review acceptance is claimed.
 
 The original-path implementation/short acceptance and capacity qualification are
-complete. The full Dense matrix, final overhead decision, public-Weka GPU run,
+complete. The full Dense matrix, public-Weka GPU run,
 MoE recorder/control perturbation and representative per-rank timing, final
 result interpretation, and final PR validation remain completion gates. Running
 jobs and partial tables do not satisfy those gates.
