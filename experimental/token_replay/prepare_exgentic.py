@@ -120,7 +120,9 @@ def encode_span(span: dict[str, Any], tokenizer: Any) -> dict[str, Any]:
     }
 
 
-def qualify_session(row: dict[str, Any], tokenizer: Any) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def qualify_session(
+    row: dict[str, Any], tokenizer: Any
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     from aiperf.dataset.loader.exgentic import _is_replayable_span
 
     best: list[dict[str, Any]] = []
