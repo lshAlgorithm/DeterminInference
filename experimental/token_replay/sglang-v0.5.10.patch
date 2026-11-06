@@ -45,7 +45,7 @@ index e947a48..fa42f7e 100644
          if return_logprob:
              if SGLANG_RETURN_ORIGINAL_LOGPROB:
 diff --git a/python/sglang/srt/managers/scheduler.py b/python/sglang/srt/managers/scheduler.py
-index 67af2d0..77d92d1 100644
+index 67af2d0..e7629dd 100644
 --- a/python/sglang/srt/managers/scheduler.py
 +++ b/python/sglang/srt/managers/scheduler.py
 @@ -1610,13 +1610,25 @@ class Scheduler(
@@ -83,6 +83,24 @@ index 67af2d0..77d92d1 100644
                  metrics_collector=(
                      self.metrics_collector if self.enable_metrics else None
                  ),
+@@ -3078,6 +3091,17 @@ class Scheduler(
+         }
+         ret["effective_max_running_requests_per_dp"] = self.max_running_requests
+ 
++        if isinstance(self.tree_cache, RadixCache):
++            evictable = self.tree_cache.evictable_size()
++            protected = self.tree_cache.protected_size()
++            ret["cache_residency"] = {
++                "prefix_resident_tokens": evictable + protected,
++                "evictable_tokens": evictable,
++                "protected_prefix_tokens": protected,
++                "allocated_kv_tokens": self.max_total_num_tokens
++                - self.token_to_kv_pool_allocator.available_size(),
++            }
++
+         if not self.spec_algorithm.is_none() and self.spec_total_num_forward_ct > 0:
+             ret["avg_spec_accept_length"] = (
+                 self.spec_total_num_accepted_tokens / self.spec_total_num_forward_ct
 diff --git a/python/sglang/srt/managers/tokenizer_manager.py b/python/sglang/srt/managers/tokenizer_manager.py
 index 8142432..6da9c2b 100644
 --- a/python/sglang/srt/managers/tokenizer_manager.py
