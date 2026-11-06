@@ -57,6 +57,12 @@ def encode_span(span: dict[str, Any], tokenizer: Any) -> dict[str, Any]:
     complete = tokenizer.apply_chat_template(
         messages + outputs, tokenize=False, add_generation_prompt=False, **template_args
     )
+    if tools and prompt == tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True):
+        raise ValueError("target_template_drops_tool_definitions")
+    if any(message.get("tool_calls") for message in messages + outputs):
+        without_calls = [{key: value for key, value in message.items() if key != "tool_calls"} for message in messages + outputs]
+        if complete == tokenizer.apply_chat_template(without_calls, tokenize=False, add_generation_prompt=False, **template_args):
+            raise ValueError("target_template_drops_tool_calls")
     for message in messages + outputs:
         if message.get("content") and message["content"] not in complete:
             raise ValueError("target_template_drops_message_content")
