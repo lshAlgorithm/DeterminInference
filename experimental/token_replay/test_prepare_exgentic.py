@@ -31,7 +31,6 @@ class TestPreparation(unittest.TestCase):
     def test_joint_encoding_and_bounds(self):
         result = prepare.encode_span(make_span(), make_tokenizer())
         self.assertEqual(result["output_ids"], list(map(ord, "answer</>")))
-        for text, reason in [("a" * 2049, "target_output_over_2048"), ("", None)]:
-            if reason:
-                with self.assertRaisesRegex(ValueError, reason):
-                    prepare.encode_span(make_span(text), make_tokenizer())
+        for text, reason in [("a" * 2049, "target_output_over_2048"), ("", "empty_source_response")]:
+            with self.assertRaisesRegex(ValueError, reason):
+                prepare.encode_span(make_span(text), make_tokenizer())
