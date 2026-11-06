@@ -42,8 +42,11 @@ def run_point(spec: dict, point: dict, output: Path) -> dict:
     server_cmd = list(spec['server']['cmd'])
     server_cmd[server_cmd.index('--max-total-tokens') + 1] = str(point['capacity'])
     client_env = {**os.environ, **spec['client']['env'], 'CONC': str(point['concurrency']), 'DURATION': str(point['duration']), 'RESULT_DIR': str(directory), 'AGENTIC_OUTPUT_DIR': str(directory), 'AGENTX_REPLAY_MODE': point['mode'], 'AGENTX_TOKEN_TRACE': point['trace']}
+    if point['mode'] == 'public':
+        client_env.pop('AGENTX_TOKEN_TRACE', None)
+        client_env.pop('AGENTX_REPLAY_MODE', None)
     receipt['server'] = {'cmd': server_cmd, 'env': spec['server']['env']}
-    receipt['client'] = {'cmd': spec['client']['cmd'], 'env': {k:client_env[k] for k in set(spec['client']['env']) | {'CONC','DURATION','RESULT_DIR','AGENTIC_OUTPUT_DIR','AGENTX_REPLAY_MODE','AGENTX_TOKEN_TRACE'}}}
+    receipt['client'] = {'cmd': spec['client']['cmd'], 'env': {k:client_env[k] for k in (set(spec['client']['env']) | {'CONC','DURATION','RESULT_DIR','AGENTIC_OUTPUT_DIR','AGENTX_REPLAY_MODE','AGENTX_TOKEN_TRACE'}) if k in client_env}}
     url = spec['client']['env']['AIPERF_SERVER_URL']
     try:
         receipt['gpu_guard'] = gpu_guard(spec['gpu_indices'])
