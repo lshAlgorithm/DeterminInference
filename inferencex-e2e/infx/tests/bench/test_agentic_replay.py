@@ -216,7 +216,7 @@ def test_token_trace_uses_original_scenario_without_public_prefetch(tmp_path):
     assert argv[:2] == ["/agentx", "profile"]
     assert _value(argv, "--input-file") == str(trace)
     assert _value(argv, "--custom-dataset-type") == "weka_trace"
-    assert _value(argv, "--endpoint-type") == "completions"
+    assert _value(argv, "--endpoint-type") == "sglang-token-completions"
     assert _value(argv, "--random-seed") == "42"
     assert "--public-dataset" not in argv
     assert "--unsafe-override" in argv
