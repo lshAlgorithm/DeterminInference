@@ -163,7 +163,7 @@ def main() -> None:
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     random.seed(42)
-    report = dict(seed=42, status="started", ep_size=args.ep_size)
+    report = {"seed": 42, "status": "started", "ep_size": args.ep_size}
     try:
         report["manifest"] = model_manifest(args.model)
         report["versions"] = {
