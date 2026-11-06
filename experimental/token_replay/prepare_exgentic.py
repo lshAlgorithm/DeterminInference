@@ -257,7 +257,16 @@ def source_candidates(
     return candidates, sources
 
 
-def prepare(source_folder: Path, output: Path, tokenizer: Any, model: str, *, max_sessions: int = 32, max_examined_sessions: int = 128, seed: int = 42) -> dict[str, Any]:
+def prepare(
+    source_folder: Path,
+    output: Path,
+    tokenizer: Any,
+    model: str,
+    *,
+    max_sessions: int = 32,
+    max_examined_sessions: int = 128,
+    seed: int = 42,
+) -> dict[str, Any]:
     import pyarrow.parquet as parquet
 
     if output.exists():
@@ -278,17 +287,28 @@ def prepare(source_folder: Path, output: Path, tokenizer: Any, model: str, *, ma
         "timing": "relative_to_selected_window; upstream_retry_adjusted; not_original_wall_clock",
         "dag": "not_recovered; sequential_nonoverlapping_calls_only",
         "selection": "seeded_session_order; longest_contiguous_valid_window_until_16; stop_at_session_budget",
-        "limits": {"sessions": max_sessions, "examined_sessions": max_examined_sessions, "min_turns": 4, "max_turns": 16, "context_tokens": 16384, "output_tokens": 2048},
+        "limits": {
+            "sessions": max_sessions,
+            "examined_sessions": max_examined_sessions,
+            "min_turns": 4,
+            "max_turns": 16,
+            "context_tokens": 16384,
+            "output_tokens": 2048,
+        },
         "source_files": sources,
         "source_rows": sum(source["rows"] for source in sources),
         "candidate_swebench_sessions": len(candidates),
         "examined": [],
         "selected": [],
-        "chat_template_sha256": hashlib.sha256(str(tokenizer.chat_template).encode()).hexdigest(),
+        "chat_template_sha256": hashlib.sha256(
+            str(tokenizer.chat_template).encode()
+        ).hexdigest(),
     }
     for candidate in candidates[:max_examined_sessions]:
         source = parquet.ParquetFile(source_folder / candidate["shard"])
-        row = source.read_row_group(candidate["row_group"]).to_pylist()[candidate["group_row"]]
+        row = source.read_row_group(candidate["row_group"]).to_pylist()[
+            candidate["group_row"]
+        ]
         requests, qualification = qualify_session(row, tokenizer)
         manifest["examined"].append({**candidate, **qualification})
         if requests:
@@ -297,14 +317,41 @@ def prepare(source_folder: Path, output: Path, tokenizer: Any, model: str, *, ma
             filename = f"{len(manifest['selected']):03d}.json"
             payload = json.dumps(trace, separators=(",", ":")).encode() + b"\n"
             (session_dir / filename).write_bytes(payload)
-            manifest["selected"].append({**candidate, "file": f"sessions/{filename}", "sha256": hashlib.sha256(payload).hexdigest(), "requests": provenance})
-        print(json.dumps({"examined": len(manifest["examined"]), "selected": len(manifest["selected"]), "session_id": row["session_id"], "reason": qualification["reason"]}), flush=True)
+            manifest["selected"].append(
+                {
+                    **candidate,
+                    "file": f"sessions/{filename}",
+                    "sha256": hashlib.sha256(payload).hexdigest(),
+                    "requests": provenance,
+                }
+            )
+        print(
+            json.dumps(
+                {
+                    "examined": len(manifest["examined"]),
+                    "selected": len(manifest["selected"]),
+                    "session_id": row["session_id"],
+                    "reason": qualification["reason"],
+                }
+            ),
+            flush=True,
+        )
         if len(manifest["selected"]) >= max_sessions:
             break
-    manifest["unexamined_candidate_sessions"] = len(candidates) - len(manifest["examined"])
+    manifest["unexamined_candidate_sessions"] = len(candidates) - len(
+        manifest["examined"]
+    )
     manifest["selected_sessions"] = len(manifest["selected"])
-    manifest["selected_requests"] = sum(len(session["requests"]) for session in manifest["selected"])
-    manifest["exclusion_counts"] = dict(Counter(exclusion["reason"] for row in manifest["examined"] for exclusion in row["exclusions"]))
+    manifest["selected_requests"] = sum(
+        len(session["requests"]) for session in manifest["selected"]
+    )
+    manifest["exclusion_counts"] = dict(
+        Counter(
+            exclusion["reason"]
+            for row in manifest["examined"]
+            for exclusion in row["exclusions"]
+        )
+    )
     manifest["status"] = "qualified" if manifest["selected"] else "no_qualified_windows"
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     return manifest
