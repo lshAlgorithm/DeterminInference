@@ -77,3 +77,43 @@ def encode_span(span: dict[str, Any], tokenizer: Any) -> dict[str, Any]:
         "output_ids": output_ids,
         "source_model": attributes.get("gen_ai.request.model"),
     }
+
+
+def qualify_session(row: dict[str, Any], tokenizer: Any) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    from aiperf.dataset.loader.exgentic import _is_replayable_span
+
+    best: list[dict[str, Any]] = []
+    current: list[dict[str, Any]] = []
+    exclusions = []
+    llm_spans = 0
+    spans = row.get("spans") or []
+    visited = 0
+    for span_index, span in enumerate(spans):
+        visited += 1
+        if not _is_replayable_span(span, span.get("attributes") or {}):
+            continue
+        llm_spans += 1
+        try:
+            request = encode_span(span, tokenizer)
+            if current and request["start"] < current[-1]["end"]:
+                raise ValueError("overlap_without_qualified_dag")
+            request["source_span_index"] = span_index
+            current.append(request)
+            if len(current) > len(best):
+                best = list(current)
+            if len(best) == 16:
+                break
+        except (ValueError, KeyError, TypeError) as error:
+            exclusions.append({"span_index": span_index, "reason": str(error)})
+            current = []
+    valid = best if len(best) >= 4 else []
+    return valid, {
+        "session_id": row.get("session_id"),
+        "source_spans": len(spans),
+        "visited_spans": visited,
+        "unexamined_spans": len(spans) - visited,
+        "examined_llm_spans": llm_spans,
+        "exclusions": exclusions,
+        "selected_span_indexes": [request["source_span_index"] for request in valid],
+        "reason": "selected" if valid else "no_continuous_valid_window_of_four",
+    }
