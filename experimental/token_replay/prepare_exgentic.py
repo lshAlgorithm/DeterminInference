@@ -11,6 +11,17 @@ from typing import Any
 
 DATASET = "Exgentic/agent-llm-traces-v2"
 REVISION = "4b8ad4ab198438e5a170f9171c19c6a2cf7c1814"
+SOURCE_HASHES = [
+    "f7cd079798f47b7610963c08105055b935316c6223f74d3fc03c401348590011",
+    "ef6fb9129aae06a155cc01f1868a707f1544fe9ae11df3c04fff3e71a964ac2c",
+    "d380ea81f8ac2ee05c0ace3a7ac7896272fc437e1e3b3a47d90de544b525477e",
+    "e7ab71e7eae7dd44197a448dbee512407a2a0ae0382b58f5f8a36633edba7d9e",
+    "283f16603e52d9d1c82b1a4a826f3ee7c09916bae036e950ed1bae683037fc80",
+    "f17f9f64139860b628cab938771f91dd141952f14eb21f88fa62df335c0f4d84",
+    "fd5e280a14b4b2116c1cdcb0b1cb945da66280d999f3c56f8848a74fdb6247e3",
+    "d22806edf2baff6ce13a63b1f6347d7b30012624222344ebe8ed82f0d84ed3d6",
+    "2aa8507830af585ac977820210adc4fc80abb7a0bbcb89bc23b6a780ff55d064",
+]
 
 
 def common_prefix(left: list[int], right: list[int]) -> int:
@@ -157,3 +168,34 @@ def make_weka(session_id: str, requests: list[dict[str, Any]], model: str) -> tu
         "hash_id_scope": "local",
         "requests": records,
     }, provenance
+
+
+def source_candidates(folder: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    import pyarrow.parquet as parquet
+
+    sources = []
+    candidates = []
+    global_row = 0
+    for shard_index, expected in enumerate(SOURCE_HASHES):
+        path = folder / f"{shard_index:04d}.parquet"
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        if digest != expected:
+            raise ValueError(f"pinned source hash mismatch: {path}")
+        source = parquet.ParquetFile(path)
+        sources.append({"file": path.name, "sha256": digest, "bytes": path.stat().st_size, "rows": source.metadata.num_rows})
+        shard_row = 0
+        for group_index in range(source.num_row_groups):
+            metadata = source.read_row_group(group_index, columns=["benchmark", "session_id"]).to_pylist()
+            for group_row, row in enumerate(metadata):
+                if row["benchmark"] == "swebench":
+                    candidates.append({
+                        "shard": path.name,
+                        "row_group": group_index,
+                        "group_row": group_row,
+                        "shard_row": shard_row,
+                        "global_row": global_row,
+                        "session_id": row["session_id"],
+                    })
+                shard_row += 1
+                global_row += 1
+    return candidates, sources
