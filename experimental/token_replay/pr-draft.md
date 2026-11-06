@@ -41,6 +41,8 @@ claims use recorder-off measurements. The acceptance fixture is synthetic and is
 Exgentic content is re-tokenized for the target model, with processed timing and
 no invented DAG. The available review is Codex-only: Claude-review was unavailable.
 No completed cross-family review or general performance improvement is claimed.
+The [final independent review](evidence/final-review-20261107.json) reconstructed
+the raw Dense results and verified the scoped analysis fix without blocking findings.
 
 <details><summary>Implementation and validation evidence</summary>
 
@@ -61,8 +63,8 @@ or denominator for cross-dataset improvement percentages.
 <details><summary>AI model disclosure</summary>
 
 Codex, GPT-6 family, implemented and integrated the changes. Fresh Codex agents
-performed independent protocol/campaign reviews and the documented MoE environment
-witness. Their exact runtime model variants could not be verified. No Claude
+performed independent protocol/campaign/delivery reviews and the documented MoE
+environment witness. Their exact runtime model variants could not be verified. No Claude
 review was available for this delivery.
 
 </details>

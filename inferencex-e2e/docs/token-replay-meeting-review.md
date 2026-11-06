@@ -7,8 +7,9 @@ and the MoE study are complete. A fixed32-prompt HTTP mechanism experiment meets
 the scoped3% target. Roomy-cache Dense throughput point estimates improve by
 0.088%/0.569%/0.847% at concurrency1/4/8; pressure concurrency4/8 and MoE content
 throughput intervals span zero. All447 qualified Dense requests pass the
-from-start exact-ID reference. Deterministic delivery checks pass; the final
-independent report review remains pending at this frozen revision.
+from-start exact-ID reference. Deterministic delivery checks pass. A fresh
+independent Codex review and scoped follow-up found no blocking issues; the
+review remains provisional because Claude-review is unavailable.
 
 ## Implementation
 
@@ -393,7 +394,7 @@ compute or communication effects. Per-request pairs, kernel names and sums are
 retained in [rank comparison](../../experimental/token_replay/evidence/moe-rank-comparison.json)
 and the [raw trace/recorder archive](../../experimental/token_replay/evidence/moe-routing-rank-evidence-20261106.tar.gz).
 
-## Review and remaining completion gates
+## Review and verification
 
 Fresh Codex reviews found and prompted fixes for target-template argument
 encoding, full-trace admission, DAG-check false positives, HTTP budget-check
@@ -404,8 +405,16 @@ reviews remain provisional. No `claude-review` MCP tool was available, so no
 cross-family review or dual-review acceptance is claimed.
 
 The original-path implementation, short acceptance, full Dense matrix, all-corpus
-reference and MoE study are complete. Final independent report review remains
-pending at this frozen revision.
+reference and MoE study are complete. The
+[final independent review](../../experimental/token_replay/evidence/final-review-20261107.json)
+reconstructed all36 Dense summaries from raw records, recomputed the72-row CSV
+and paired intervals, reran37 phase audits and the delivery verifier, and checked
+all447 reference outputs. It also reconstructed MoE service/recorder-control
+results and checked the overhead, storage and representative rank summaries.
+One nonblocking completion-flag weakness was fixed in `e67d563` and independently
+re-reviewed: wrong grids/durations now remain incomplete, while the actual
+36-point output is unchanged. No blocking findings remain. This is Codex-only
+provisional review, not dual-review acceptance.
 
 ## Meeting requirement disposition
 
@@ -418,8 +427,14 @@ pending at this frozen revision.
 | Public hash-only traces | Original true replies cannot be recovered. Public reference stays separate; target-tokenized Exgentic content and explicit synthetic controls carry the content tests. |
 | MoE and multiple GPUs | Full308-request real/synthetic service and both-rank routing coverage, fixed TP2/EP2 placement and EPLB off, representative9-request rank timing and paired recorder-cost controls. Whole-workload rank timing is not established. |
 | Reproducibility and delivery | Seed42, source/model hashes, function-scoped commits, two dependency patches, Git LFS logs, complete tables, commands and a local bilingual PR draft. No upstream publication or maintainer acceptance is implied. |
-| Review | Deterministic delivery checks pass; earlier independent Codex reviews are provisional. Claude-review is unavailable; final report review is pending at this freeze. |
+| Review | Deterministic delivery checks and final independent Codex review/re-review complete without blocking findings. Codex positives remain provisional; Claude-review is unavailable. |
 
 The measurements support reproducible trajectory replay as a benchmark-fidelity
 improvement. They do not establish general engine acceleration, a full removal
 of warmup, or a causal MoE routing-to-GPU-time mechanism.
+
+The deliverable is an opt-in replay implementation with a bounded benchmark
+study and a local PR draft. GPU0/2/3 are released, all experiment stages completed,
+and raw evidence is retained in Git LFS with verified archive hashes. A maintainer
+can review the interfaces and evidence without treating these local runs as an
+official InferenceX score or upstream acceptance.
