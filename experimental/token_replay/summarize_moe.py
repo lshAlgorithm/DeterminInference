@@ -77,3 +77,62 @@ def summarize_service(directory: Path, expected: dict) -> dict:
             'mean_request_seconds': seconds/len(rows),
             'token_weighted_tpot_seconds': sum(r['decode_seconds'] for r in rows)/decode_tokens,
             'work_by_request': work}
+
+
+def compare_moe(off: Path, on: Path | None) -> dict:
+    state = json.loads((off/'status.json').read_text())
+    if state['status'] != 'complete':
+        raise ValueError('recorder-off study incomplete')
+    expected = {}
+    for content, source in state['spec']['sources'].items():
+        expected[content] = {(p.name, i): [len(r['input_ids']), len(r['output_ids'])]
+                             for p in sorted(Path(source).glob('*.json'))
+                             for i, r in enumerate(json.loads(p.read_text())['requests'])}
+    if not expected['real'] or expected['real'] != expected['synthetic']:
+        raise ValueError('source length structure differs or is empty')
+    arms = {}
+    pairs = []
+    metrics = ['service_seconds', 'service_output_tps', 'mean_ttft_seconds', 'token_weighted_tpot_seconds']
+    for repeat in range(3):
+        for content in ['real', 'synthetic']:
+            name = f'repeat{repeat}-{content}'
+            arms[name] = summarize_service(off/name, expected[content])
+        real, synthetic = [arms[f'repeat{repeat}-{c}'] for c in ['real', 'synthetic']]
+        if real['work_by_request'] != synthetic['work_by_request']:
+            raise ValueError('paired real/synthetic cached work differs')
+        pairs.append({'repeat': repeat, 'synthetic_relative_to_real': {m: synthetic[m]/real[m]-1 for m in metrics}})
+    estimates = {}
+    for metric in metrics:
+        values = [p['synthetic_relative_to_real'][metric] for p in pairs]
+        mean = statistics.mean(values)
+        half = 4.302652729911275*statistics.stdev(values)/math.sqrt(3)
+        estimates[metric] = {'mean': mean, 'ci95': [mean-half, mean+half]}
+    perturbation = {}
+    routing = {}
+    if on is not None:
+        if json.loads((on/'status.json').read_text())['status'] != 'complete':
+            raise ValueError('recorder-on study incomplete')
+        for content in ['real', 'synthetic']:
+            recorded = summarize_service(on/f'routing-{content}', expected[content])
+            reference = [arms[f'repeat{i}-{content}'] for i in range(3)]
+            if any(recorded['work_by_request'] != r['work_by_request'] for r in reference):
+                raise ValueError('recorder on/off cached work differs')
+            perturbation[content] = {'on': recorded, 'relative_to_off_mean': {m: recorded[m]/statistics.mean(r[m] for r in reference)-1 for m in metrics},
+                                     'scope': 'one recorder-on pass versus three earlier off passes; descriptive perturbation, no paired uncertainty or drift control'}
+            routing[content] = aggregate_routing(json.loads((on/f'routing-{content}'/'routing.json').read_text()), len({k[0] for k in expected[content]}))
+        for phase in routing['real']['phases']:
+            for real, synthetic in zip(routing['real']['phases'][phase], routing['synthetic']['phases'][phase], strict=True):
+                a, b = real['expert_counts'], synthetic['expert_counts']
+                real['synthetic_total_variation_distance'] = 0.5*sum(abs(x/sum(a)-y/sum(b)) for x, y in zip(a,b,strict=True)) if sum(a) and sum(b) else None
+    return {'complete_off': True, 'complete_on': on is not None, 'arms': arms, 'pairs': pairs, 'estimates': estimates,
+            'recorder_perturbation': perturbation, 'routing': routing,
+            'scope': 'fixed zero-wait sequential service, cache flushed between sessions; three-pair t intervals for repeated runs, no population or source-arrival claims; excludes flush, initialization and file I/O; token routing differences do not establish GPU timing differences'}
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--off', type=Path, required=True)
+    parser.add_argument('--on', type=Path)
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    args.output.write_text(json.dumps(compare_moe(args.off, args.on), indent=2))
