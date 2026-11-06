@@ -28,6 +28,17 @@ def make_tokenizer():
 
 
 class TestPreparation(unittest.TestCase):
+    def test_invalid_call_breaks_continuous_window(self):
+        requests = [{"start": index * 2, "end": index * 2 + 1} for index in range(7)]
+        requests[3] = ValueError("rejected_call")
+        with patch.object(prepare, "encode_span", side_effect=requests):
+            window, receipt = prepare.qualify_session({"session_id": "a", "spans": [make_span()] * 7}, None)
+        self.assertEqual(window, [])
+        self.assertEqual(receipt["exclusions"], [{"span_index": 3, "reason": "rejected_call"}])
+        with patch.object(prepare, "encode_span", side_effect=[{"start": index * 2, "end": index * 2 + 1} for index in range(4)]):
+            window, receipt = prepare.qualify_session({"session_id": "a", "spans": [make_span()] * 4}, None)
+        self.assertEqual(receipt["selected_span_indexes"], [0, 1, 2, 3])
+
     def test_tool_calls_not_preserved_by_template_are_rejected(self):
         output = [{"role": "assistant", "parts": [{"type": "tool_call", "name": "run", "id": "c1", "arguments": {"command": "ls"}}]}]
         span = make_span(**{"gen_ai.output.messages": json.dumps(output)})
