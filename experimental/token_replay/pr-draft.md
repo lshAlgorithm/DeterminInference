@@ -35,7 +35,7 @@ No completed cross-family review or workload-wide performance improvement is cla
 
 - [Reproduction guide](README.md) and [harness patch](agentx-harness-v1.0.13.patch), against tag `agentx-v1.0.13`.
 - [SGLang patch](sglang-v0.5.10.patch), against base `1519acf`.
-- [Exact deployed source archive](evidence/serving-source-20261106.tar.gz).
+- [Exact deployed source archive with cache-residency metrics](evidence/serving-source-residency-20261106.tar.gz).
 - [Dense matrix specification](dense-formal-01.spec.json), frozen after successful
   roomy/pressure preflights, with actual eviction in the pressure condition.
 - [MoE performance specification](moe-workload-off-01.spec.json), fixed 308-request

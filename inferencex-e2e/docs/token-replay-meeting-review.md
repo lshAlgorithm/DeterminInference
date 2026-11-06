@@ -282,6 +282,13 @@ bias but does not eliminate temporal drift; intervals describe repeats of the
 fixed308-request workload. Recorder-on timings are excluded from content
 performance comparisons.
 
+The six paired engine runs are retained in the
+[recorder control archive](../../experimental/token_replay/evidence/moe-recorder-paired-evidence-20261106.tar.gz).
+The [storage and environment archive](../../experimental/token_replay/evidence/storage-doc-witness-evidence-20261106.tar.gz)
+contains the qualified allocator probe and final documented environment witness.
+Both local archives match the remote SHA-256 values in the
+[transfer verification receipt](../../experimental/token_replay/evidence/moe-final-archives-transfer-verification.json).
+
 All9 representative full requests per content completed with their preceding
 session history. All36 expected rank trace files were parsed and paired. The
 following are sums of within-category GPU interval unions over those9 requests:
