@@ -1987,3 +1987,18 @@ def test_expected_output_tokens_ignore_out_of_range_trace_turns(invalid_turn):
     _, metrics = compute_request_metrics(records, traces=traces)
     assert metrics["tokens"]["output_expected"]["mean"] == 20
     assert metrics["tokens"]["output_expected"]["std"] == 9
+
+
+@pytest.mark.parametrize("mode", ["generated", "recorded"])
+def test_token_experiment_aggregate_is_not_submission_valid(tmp_path: Path, mode: str):
+    result_dir = _write_fixture(tmp_path)
+    trace = str(tmp_path / "sessions")
+    agg = _run_processor(
+        result_dir,
+        tmp_path / "out",
+        {"AGENTX_TOKEN_TRACE": trace, "AGENTX_REPLAY_MODE": mode},
+    )
+    assert agg["submission_valid"] is False
+    assert agg["token_replay_experiment"]["mode"] == mode
+    assert agg["token_replay_experiment"]["trace"] == trace
+    assert agg["token_replay_experiment"]["seed"] == 42
