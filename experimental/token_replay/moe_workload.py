@@ -82,7 +82,7 @@ def main() -> None:
             status['current'] = run['name']
             (args.output/'status.json').write_text(json.dumps(status,indent=2))
             before = set(args.output.glob('expert_distribution_recorder_*.pt'))
-            summary = run_workload(engine, Path(spec['sources'][run['content']]), args.output/run['name'], run['record'], run['profile'])
+            summary = run_workload(engine, Path(spec['sources'][run['content']]), args.output/run['name'], run['record'], run['profile'], spec.get('profile_targets'))
             if run['record']:
                 for path in set(args.output.glob('expert_distribution_recorder_*.pt')) - before:
                     path.rename(args.output/run['name']/path.name)
