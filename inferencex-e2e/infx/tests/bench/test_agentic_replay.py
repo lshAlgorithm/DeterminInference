@@ -202,3 +202,21 @@ def test_corpus_is_uncapped_unless_explicitly_capped_or_pinned(prefix, override,
 
     assert (config.loader, config.dataset) == (loader, dataset)
     assert _value(replay_argv(config, "/venv/bin/agentx"), "--public-dataset") == loader
+
+
+def test_token_trace_uses_original_scenario_without_public_prefetch(tmp_path):
+    trace = tmp_path / "trace.json"
+    trace.write_text("{}")
+    cfg = ReplayConfig.from_env({
+        **BASE_ENV, "FRAMEWORK": "sglang", "AGENTX_TOKEN_TRACE": str(trace),
+        "AGENTX_REPLAY_MODE": "recorded", "AGENTX_HARNESS_WHEEL": "/patched.whl",
+        "AGENTX_HARNESS_SHA256": "f" * 64,
+    }, tmp_path)
+    argv = replay_argv(cfg, "/agentx")
+    assert argv[:2] == ["/agentx", "profile"]
+    assert _value(argv, "--input-file") == str(trace)
+    assert _value(argv, "--custom-dataset-type") == "weka_trace"
+    assert _value(argv, "--endpoint-type") == "completions"
+    assert _value(argv, "--random-seed") == "42"
+    assert "--public-dataset" not in argv
+    assert "--unsafe-override" in argv
