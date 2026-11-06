@@ -28,6 +28,12 @@ def make_tokenizer():
 
 
 class TestPreparation(unittest.TestCase):
+    def test_tool_calls_not_preserved_by_template_are_rejected(self):
+        output = [{"role": "assistant", "parts": [{"type": "tool_call", "name": "run", "id": "c1", "arguments": {"command": "ls"}}]}]
+        span = make_span(**{"gen_ai.output.messages": json.dumps(output)})
+        with self.assertRaisesRegex(ValueError, "target_template_drops_tool_calls"):
+            prepare.encode_span(span, make_tokenizer())
+
     def test_joint_encoding_and_bounds(self):
         result = prepare.encode_span(make_span(), make_tokenizer())
         self.assertEqual(result["output_ids"], list(map(ord, "answer</>")))
