@@ -1,0 +1,467 @@
+diff --git a/docs/tutorials/weka-trace.md b/docs/tutorials/weka-trace.md
+index 8c25985..0f5e97d 100644
+--- a/docs/tutorials/weka-trace.md
++++ b/docs/tutorials/weka-trace.md
+@@ -44,6 +44,19 @@ Whatever you pass to `--model` becomes the model the server actually sees. Trace
+ 
+ The `--fixed-schedule` flag replays requests at their recorded timestamps; subagents run in parallel and the parent's next turn waits until they complete.
+ 
++### Exact-token SGLang experiments
++
++The patched harness accepts paired `input_ids` and `output_ids` on each normal
++or streaming Weka request. Their lengths must match `in` and `out`. Use
++`--endpoint-type sglang-token-completions` and set `AGENTX_REPLAY_MODE=recorded`
++to send the recorded response IDs to a patched SGLang server. Set the mode to
++`generated` for normal sampling with the same fixed prompt IDs and lengths.
++The endpoint uses `cache_salt` for session isolation, preserves the complete
++prompt IDs, and limits replay IDs to one token for one-token warmup credits.
++It requires token-bearing turns; ordinary completions retain their existing
++capability declaration. Local traces require `--unsafe-override` and produce
++`submission_valid=false`; they are not public-corpus submissions.
++
+ ### Directory vs Single File
+ 
+ Both work:
+diff --git a/src/aiperf/common/models/dataset_models.py b/src/aiperf/common/models/dataset_models.py
+index bcfbd6e..ef9e82e 100644
+--- a/src/aiperf/common/models/dataset_models.py
++++ b/src/aiperf/common/models/dataset_models.py
+@@ -286,6 +286,15 @@ class Turn(AIPerfBaseModel):
+     and it contains timestamp, delay, and raw data that user sends in each turn.
+     """
+ 
++    input_ids: list[int] | None = Field(
++        default=None,
++        description="Complete recorded prompt IDs, bypassing message rendering.",
++    )
++    output_ids: list[int] | None = Field(
++        default=None,
++        description="Recorded assistant IDs for optional token replacement.",
++    )
++
+     model: str | None = Field(default=None, description="Model name used for the turn.")
+     role: str | None = Field(default=None, description="Role of the turn.")
+     timestamp: int | float | None = Field(
+diff --git a/src/aiperf/dataset/loader/weka_trace.py b/src/aiperf/dataset/loader/weka_trace.py
+index 6b8f771..1491ed1 100644
+--- a/src/aiperf/dataset/loader/weka_trace.py
++++ b/src/aiperf/dataset/loader/weka_trace.py
+@@ -96,6 +96,42 @@ def _install_replay_dependencies(conversations: list[Conversation]) -> None:
+             ]
+ 
+ 
++def _attach_recorded_tokens(
++    conversations: list[Conversation], data: dict[str, list[WekaTrace]]
++) -> None:
++    """Resolve original request indices after serial or parallel DAG reconstruction."""
++    import os
++
++    mode = os.environ.get("AGENTX_REPLAY_MODE")
++    if mode not in (None, "generated", "recorded"):
++        raise ValueError("AGENTX_REPLAY_MODE must be generated or recorded")
++    for conversation in conversations:
++        for turn in conversation.turns:
++            if turn.source_trace_id is None or turn.source_outer_idx is None:
++                if mode is not None:
++                    raise ValueError("token experiment requires source request indices")
++                continue
++            req = data[turn.source_trace_id][0].requests[turn.source_outer_idx]
++            if turn.source_inner_idx is not None:
++                req = req.requests[turn.source_inner_idx]
++            if isinstance(req, WekaSubagentEntry):
++                raise ValueError("source index resolves to a subagent marker")
++            if req.input_ids is None:
++                if mode is not None:
++                    raise ValueError(
++                        "token experiment requires complete input_ids/output_ids"
++                    )
++                continue
++            if turn.max_tokens != len(req.output_ids):
++                raise ValueError(
++                    "recorded output must not be truncated by synthesis settings"
++                )
++            turn.input_ids = list(req.input_ids)
++            turn.output_ids = list(req.output_ids)
++            turn.raw_messages = None
++            turn.texts = []
++
++
+ def _subagent_request_absolute_t(
+     entry: WekaSubagentEntry, req: WekaNormalRequest
+ ) -> float:
+@@ -1225,21 +1261,25 @@ class WekaTraceLoader(HashIdsPromptSynthesisMixin, BaseFileLoader):
+         split_stats.total_seams += detection.seams_merged
+         split_stats.total_empty_hash += detection.unclassified_empty_hash
+         _logger.debug(
+-            lambda: f"Trace {trace_id}: detected {1 + len(detection.worker_indices)} "
+-            f"agents ({detection.seams_merged} seams merged, "
+-            f"{len(detection.worker_indices)} spawned chains "
+-            f"[{n_aux} aux sidecars ({n_red} reductions), {n_wg} worker-group], "
+-            f"{detection.unclassified_empty_hash} empty-hash kept on main)"
++            lambda: (
++                f"Trace {trace_id}: detected {1 + len(detection.worker_indices)} "
++                f"agents ({detection.seams_merged} seams merged, "
++                f"{len(detection.worker_indices)} spawned chains "
++                f"[{n_aux} aux sidecars ({n_red} reductions), {n_wg} worker-group], "
++                f"{detection.unclassified_empty_hash} empty-hash kept on main)"
++            )
+         )
+         # True-DAG fork edges live only in this log in v1 (the orchestrator
+         # cannot replay nested spawns, so all chains attach to the root).
+         _logger.debug(
+-            lambda: f"Trace {trace_id} fork detail: "
+-            + "; ".join(
+-                f"fa:{n:03d} parent_chain={detection.chains[ci].fork.parent_chain} "
+-                f"depth={detection.chains[ci].fork.depth}"
+-                for n, ci in enumerate(detection.worker_indices)
+-                if detection.chains[ci].fork is not None
++            lambda: (
++                f"Trace {trace_id} fork detail: "
++                + "; ".join(
++                    f"fa:{n:03d} parent_chain={detection.chains[ci].fork.parent_chain} "
++                    f"depth={detection.chains[ci].fork.depth}"
++                    for n, ci in enumerate(detection.worker_indices)
++                    if detection.chains[ci].fork is not None
++                )
+             )
+         )
+         main_normals = list(detection.chains[detection.main_index].requests)
+@@ -1503,6 +1543,7 @@ class WekaTraceLoader(HashIdsPromptSynthesisMixin, BaseFileLoader):
+             # that share the same PromptGenerator.
+             self.prompt_generator._cache.clear()
+ 
++        _attach_recorded_tokens(conversations, data)
+         _install_replay_dependencies(conversations)
+ 
+         from aiperf.common.models import DatasetMetadata
+diff --git a/src/aiperf/dataset/loader/weka_trace_models.py b/src/aiperf/dataset/loader/weka_trace_models.py
+index e65a445..f8f8882 100644
+--- a/src/aiperf/dataset/loader/weka_trace_models.py
++++ b/src/aiperf/dataset/loader/weka_trace_models.py
+@@ -13,12 +13,35 @@ from __future__ import annotations
+ 
+ from typing import Annotated, Any, Literal, TypeAlias
+ 
+-from pydantic import ConfigDict, Field
++from pydantic import ConfigDict, Field, model_validator
+ 
+ from aiperf.common.models import AIPerfBaseModel
+ 
+ 
+-class WekaNormalRequest(AIPerfBaseModel):
++class WekaTokenRequest(AIPerfBaseModel):
++    input_ids: list[Annotated[int, Field(strict=True, ge=0)]] | None = Field(
++        default=None, description="Complete target-tokenizer prompt IDs."
++    )
++    output_ids: list[Annotated[int, Field(strict=True, ge=0)]] | None = Field(
++        default=None, description="Complete target-tokenizer assistant IDs."
++    )
++
++    @model_validator(mode="after")
++    def validate_token_pair(self) -> WekaTokenRequest:
++        if (self.input_ids is None) != (self.output_ids is None):
++            raise ValueError("input_ids and output_ids must be supplied together")
++        if self.input_ids is not None:
++            if not self.input_ids or not self.output_ids:
++                raise ValueError("recorded token sequences must be nonempty")
++            if (
++                len(self.input_ids) != self.input_length
++                or len(self.output_ids) != self.output_length
++            ):
++                raise ValueError("recorded token lengths must match in/out")
++        return self
++
++
++class WekaNormalRequest(WekaTokenRequest):
+     """One normal (``type: "n"``) API call in a Weka trace."""
+ 
+     model_config = ConfigDict(extra="forbid", populate_by_name=True)
+@@ -50,7 +73,7 @@ class WekaNormalRequest(AIPerfBaseModel):
+     )
+ 
+ 
+-class WekaStreamingRequest(AIPerfBaseModel):
++class WekaStreamingRequest(WekaTokenRequest):
+     """One streaming (``type: "s"``) API call in a Weka trace.
+ 
+     Structurally identical to :class:`WekaNormalRequest` except for the
+diff --git a/src/aiperf/endpoints/openai_completions.py b/src/aiperf/endpoints/openai_completions.py
+index 76cfbac..c850382 100644
+--- a/src/aiperf/endpoints/openai_completions.py
++++ b/src/aiperf/endpoints/openai_completions.py
+@@ -3,6 +3,8 @@
+ 
+ from __future__ import annotations
+ 
++import os
++
+ from aiperf.common.models import (
+     BaseResponseData,
+     InferenceServerResponse,
+@@ -57,6 +59,17 @@ class CompletionsEndpoint(BaseEndpoint):
+         if turn.extra_body:
+             payload.update(turn.extra_body)
+ 
++        if turn.input_ids is not None:
++            payload["prompt"] = list(turn.input_ids)
++            payload.pop("replay_token_ids", None)
++            if os.environ.get("AGENTX_REPLAY_MODE") == "recorded":
++                if turn.output_ids is None:
++                    raise ValueError("recorded mode requires output_ids")
++                count = turn.max_tokens or len(turn.output_ids)
++                payload["replay_token_ids"] = turn.output_ids[:count]
++            payload["ignore_eos"] = True
++            payload["seed"] = 42
++
+         # Read the merged payload, not endpoint.streaming: the extras above can
+         # override "stream", and a server rejects stream_options when stream is
+         # false ("Stream options can only be defined when stream=True").
+diff --git a/src/aiperf/endpoints/sglang_token_completions.py b/src/aiperf/endpoints/sglang_token_completions.py
+new file mode 100644
+index 0000000..493db83
+--- /dev/null
++++ b/src/aiperf/endpoints/sglang_token_completions.py
+@@ -0,0 +1,12 @@
++from typing import Any
++
++from aiperf.common.models import RequestInfo
++from aiperf.endpoints.openai_completions import CompletionsEndpoint
++
++
++class SGLangTokenCompletionsEndpoint(CompletionsEndpoint):
++    def format_payload(self, request_info: RequestInfo) -> dict[str, Any]:
++        """Send complete token prompts with the worker's SGLang cache salt."""
++        if len(request_info.turns) != 1 or request_info.turns[0].input_ids is None:
++            raise ValueError("sglang-token-completions requires a complete token prompt")
++        return super().format_payload(request_info)
+diff --git a/src/aiperf/plugin/plugins.yaml b/src/aiperf/plugin/plugins.yaml
+index 89a5c03..ca74e67 100644
+--- a/src/aiperf/plugin/plugins.yaml
++++ b/src/aiperf/plugin/plugins.yaml
+@@ -240,6 +240,19 @@ endpoint:
+       tokenizes_input: true
+       metrics_title: LLM Metrics
+ 
++  sglang-token-completions:
++    class: aiperf.endpoints.sglang_token_completions:SGLangTokenCompletionsEndpoint
++    description: |
++      SGLang completions with full input token IDs and cache-salt isolation.
++      Requires token-bearing turns from an exact-token trace.
++    metadata:
++      endpoint_path: /v1/completions
++      supports_streaming: true
++      produces_tokens: true
++      tokenizes_input: true
++      supports_cache_bust: true
++      metrics_title: LLM Metrics
++
+   responses:
+     class: aiperf.endpoints.openai_responses:ResponsesEndpoint
+     description: |
+diff --git a/src/aiperf/workers/worker.py b/src/aiperf/workers/worker.py
+index f4f53fa..7c4a173 100644
+--- a/src/aiperf/workers/worker.py
++++ b/src/aiperf/workers/worker.py
+@@ -415,6 +415,9 @@ def _apply_cache_bust(
+     bytes. ``SYSTEM_*`` targets are handled in
+     :func:`_apply_system_target_cache_bust`.
+     """
++    if session.turn_list and session.turn_list[-1].input_ids is not None:
++        return system_message
++
+     marker = credit.cache_bust_marker
+     target = credit.cache_bust_target
+ 
+@@ -1540,6 +1543,15 @@ class Worker(BaseComponentService, ProcessHealthMixin):
+                     last_turn.raw_payload, credit.max_tokens_override
+                 )
+             turns = [*turns[:-1], last_turn.model_copy(update=update)]
++        if turns and turns[-1].input_ids is not None:
++            turn = turns[-1]
++            extra = dict(turn.extra_body or {})
++            if (
++                credit.cache_bust_marker
++                and credit.cache_bust_target != CacheBustTarget.NONE
++            ):
++                extra["cache_salt"] = credit.cache_bust_marker
++            turns = [turn.model_copy(update={"extra_body": extra})]
+         source_turn = turns[-1] if turns else None
+         return RequestInfo(
+             model_endpoint=self.model_endpoint,
+diff --git a/tests/unit/dataset/loader/test_weka_recorded_tokens.py b/tests/unit/dataset/loader/test_weka_recorded_tokens.py
+new file mode 100644
+index 0000000..6a7c096
+--- /dev/null
++++ b/tests/unit/dataset/loader/test_weka_recorded_tokens.py
+@@ -0,0 +1,69 @@
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: Apache-2.0
++from copy import deepcopy
++
++import pytest
++from pydantic import ValidationError
++
++from aiperf.dataset.loader.weka_trace_models import WekaNormalRequest
++
++
++@pytest.mark.parametrize(
++    "update",
++    [
++        {"output_ids": None},
++        {"input_ids": []},
++        {"in": 3},
++        {"output_ids": [True]},
++        {"input_ids": [-1, 2]},
++    ],
++)
++def test_invalid_recorded_pairs_are_rejected(update):
++    row = {
++        "t": 0,
++        "type": "n",
++        "model": "test",
++        "in": 2,
++        "out": 1,
++        "input_ids": [1, 2],
++        "output_ids": [3],
++    }
++    with pytest.raises(ValidationError):
++        WekaNormalRequest.model_validate({**row, **update})
++
++
++def test_recorded_dag_tokens_survive_original_reconstruction(monkeypatch):
++    from aiperf.dataset.loader.weka_trace import WekaTraceLoader
++    from tests.unit.dataset.loader.test_weka_trace import (
++        FIXTURES,
++        _mk_user_config,
++        _stub_prompt_generator_for_reconstructor,
++    )
++
++    monkeypatch.setenv("AGENTX_REPLAY_MODE", "recorded")
++    loader = WekaTraceLoader(
++        filename=str(FIXTURES / "one_subagent.json"), run=_mk_user_config()
++    )
++    _stub_prompt_generator_for_reconstructor(loader)
++    data = loader.load_dataset()
++    for traces in data.values():
++        for trace in traces:
++            for outer in trace.requests:
++                requests = outer.requests if outer.type == "subagent" else [outer]
++                for index, req in enumerate(requests):
++                    req.input_ids = [index + 10] * req.input_length
++                    req.output_ids = [index + 20] * req.output_length
++    frozen = deepcopy(data)
++    conversations = loader.convert_to_conversations(data)
++    assert len(conversations) >= 2
++    assert any(turn.branch_ids for conv in conversations for turn in conv.turns)
++    assert any(turn.prerequisites for conv in conversations for turn in conv.turns)
++    for conv in conversations:
++        for turn in conv.turns:
++            req = frozen[turn.source_trace_id][0].requests[turn.source_outer_idx]
++            if turn.source_inner_idx is not None:
++                req = req.requests[turn.source_inner_idx]
++            assert turn.input_ids == req.input_ids
++            assert turn.output_ids == req.output_ids
++            assert turn.max_tokens == len(turn.output_ids)
++            assert turn.raw_messages is None
+diff --git a/tests/unit/endpoints/test_completions_endpoint.py b/tests/unit/endpoints/test_completions_endpoint.py
+index 6b6e736..a046a66 100644
+--- a/tests/unit/endpoints/test_completions_endpoint.py
++++ b/tests/unit/endpoints/test_completions_endpoint.py
+@@ -28,6 +28,31 @@ class TestCompletionsEndpoint:
+         """Create a CompletionsEndpoint instance."""
+         return create_endpoint_with_mock_transport(CompletionsEndpoint, model_endpoint)
+ 
++    @pytest.mark.parametrize(
++        "mode,cap", [("generated", 3), ("recorded", 3), ("recorded", 1)]
++    )
++    def test_recorded_prompt_and_warmup_wire_ids(
++        self, endpoint, model_endpoint, monkeypatch, mode, cap
++    ):
++        monkeypatch.setenv("AGENTX_REPLAY_MODE", mode)
++        turn = Turn(
++            input_ids=[7, 8],
++            output_ids=[9, 10, 11],
++            max_tokens=cap,
++            extra_body={"cache_salt": "tree", "prompt": "must not override"},
++        )
++        request = create_request_info(model_endpoint=model_endpoint, turns=[turn])
++        payload = endpoint.format_payload(request)
++        assert payload["prompt"] == [7, 8]
++        assert payload["max_tokens"] == cap
++        assert payload["cache_salt"] == "tree"
++        assert payload["ignore_eos"] is True
++        if mode == "recorded":
++            assert payload["replay_token_ids"] == [9, 10, 11][:cap]
++        else:
++            assert "replay_token_ids" not in payload
++        assert turn.output_ids == [9, 10, 11]
++
+     def test_format_payload_single_prompt(self, endpoint, model_endpoint):
+         """Test single prompt formatting."""
+         turn = Turn(
+diff --git a/tests/unit/timing/test_timing_config_cache_bust.py b/tests/unit/timing/test_timing_config_cache_bust.py
+index aea2792..f907e98 100644
+--- a/tests/unit/timing/test_timing_config_cache_bust.py
++++ b/tests/unit/timing/test_timing_config_cache_bust.py
+@@ -62,3 +62,15 @@ def test_cache_bust_enabled_reflects_scenario_autofill() -> None:
+ def test_cache_bust_enabled_false_without_scenario() -> None:
+     run = _build_run(scenario=None)
+     assert TimingConfig.from_run(run).cache_bust_enabled is False
++
++
++def test_token_endpoint_scenario_config_survives_export_revalidation() -> None:
++    from aiperf.plugin.enums import EndpointType
++
++    run = _build_run(scenario="agentx")
++    run.cfg.endpoint.type = EndpointType("sglang-token-completions")
++    run.random_seed = 42
++    apply_scenario(run)
++    restored = BenchmarkConfig.model_validate(run.cfg)
++    assert restored.endpoint.type == "sglang-token-completions"
++    assert restored.get_cache_bust_target() == CacheBustTarget.FIRST_TURN_PREFIX
+diff --git a/tests/unit/workers/test_worker.py b/tests/unit/workers/test_worker.py
+index 7a3133b..7536c53 100644
+--- a/tests/unit/workers/test_worker.py
++++ b/tests/unit/workers/test_worker.py
+@@ -469,6 +469,41 @@ class TestWorkerRequestLatency:
+ 
+ @pytest.mark.asyncio
+ class TestCreateRequestInfo:
++    @pytest.mark.parametrize("marker", ["parent-domain", "other-domain", None])
++    async def test_token_request_isolation_and_warmup_do_not_mutate_dataset(
++        self, mock_worker, marker
++    ):
++        from aiperf.common.enums import CacheBustTarget
++
++        original = Turn(input_ids=[1, 2], output_ids=[3, 4], max_tokens=2)
++        context = CreditContext(
++            credit=Credit(
++                id=1,
++                phase=CreditPhase.WARMUP,
++                conversation_id="c",
++                x_correlation_id="x",
++                turn_index=0,
++                num_turns=1,
++                issued_at_ns=0,
++                max_tokens_override=1,
++                cache_bust_marker=marker,
++                cache_bust_target=CacheBustTarget.FIRST_TURN_PREFIX,
++            ),
++            drop_perf_ns=0,
++        )
++        info = mock_worker._create_request_info(
++            x_request_id="r",
++            credit_context=context,
++            turns=[Turn(texts=[Text(contents=["history"])]), original],
++        )
++        assert len(info.turns) == 1
++        assert info.turns[0].input_ids == [1, 2]
++        assert info.turns[0].max_tokens == 1
++        assert info.turns[0].extra_body.get("cache_salt") == marker
++        assert original.extra_body is None
++        assert original.max_tokens == 2
++        assert original.output_ids == [3, 4]
++
+     async def test_create_request_info_overrides_only_outgoing_turn(self, mock_worker):
+         original = Turn(max_tokens=4096)
+         turns = [original]
