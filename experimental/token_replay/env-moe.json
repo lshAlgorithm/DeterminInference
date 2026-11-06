@@ -1,0 +1,43 @@
+{
+  "base": "gpu6 existing isolated Python 3.12.14 venv with CUDA 12.8",
+  "python": "/home/tegao/infra-token-replay/.venv/bin/python",
+  "pythonpath": "/home/tegao/infra-token-replay/python",
+  "pip_phases": [],
+  "verified_distribution_versions": {
+    "torch": "2.9.1+cu128",
+    "sglang": "0.5.10",
+    "transformers": "5.3.0",
+    "triton": "3.5.1",
+    "flashinfer-python": "0.6.7.post2"
+  },
+  "env": {
+    "CUDA_VISIBLE_DEVICES": "2,3",
+    "CUDA_HOME": "/home/tegao/infra-token-replay/cuda-toolkit",
+    "OMP_NUM_THREADS": "8",
+    "MKL_NUM_THREADS": "8",
+    "OPENBLAS_NUM_THREADS": "8"
+  },
+  "weights": {
+    "repo_id": "Qwen/Qwen1.5-MoE-A2.7B-Chat",
+    "revision": "ec052fda178e241c7c443468d2fa1db6618996be",
+    "path": "/home/tegao/infra-token-replay/models/Qwen1.5-MoE-A2.7B-Chat",
+    "parameters": 14315784192,
+    "dtype": "BF16",
+    "download_endpoint": "https://hf-mirror.com"
+  },
+  "resource_shape": {
+    "gpu_indices": [2, 3],
+    "gpu_type": "NVIDIA GeForce RTX 4090",
+    "gpu_memory_mib_each": 24564,
+    "tensor_parallel_size": 2,
+    "expert_parallel_size": 2,
+    "dynamic_expert_rebalancing": false,
+    "initial_expert_location": "trivial"
+  },
+  "validation": {
+    "imports": "verified package metadata only; GPU witness pending",
+    "kernel_witness": "moe_probe.py --ep-size 2",
+    "agent_follows_doc": "pending",
+    "scope": "Correctness diagnostic, not original AgentX performance evidence"
+  }
+}
