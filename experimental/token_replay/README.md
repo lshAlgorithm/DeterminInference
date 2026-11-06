@@ -18,6 +18,11 @@ experiments with `submission_valid=false`.
 | Dense model | `/home/tegao/models/Qwen2.5-7B-Instruct-GPTQ-Int4` |
 | MoE model | Qwen1.5-MoE-A2.7B-Chat BF16, revision `ec052fda178e241c7c443468d2fa1db6618996be`, TP2/EP2 |
 
+[Model content manifest](evidence/model-content-manifest-20261106.json) records
+SHA-256 for actual weights, model/tokenizer configuration and vocabulary files.
+The existing Dense checkpoint has no verified source revision; its content
+hashes, rather than an inferred Hugging Face revision, identify the artifact.
+
 Apply each patch in a separate clean checkout at its stated base with
 `git apply --check` followed by `git apply`. Use the archived wheel for byte-exact
 harness reproduction. The serving overlay archive records the exact Python
