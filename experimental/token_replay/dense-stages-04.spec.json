@@ -1,0 +1,29 @@
+{
+  "wait_for": "/home/tegao/infra-token-replay/weka-original-04/status.json",
+  "stages": [
+    {
+      "name": "dense-formal",
+      "cmd": [
+        "python3",
+        "/home/tegao/infra-token-replay/run_campaign.py",
+        "--spec",
+        "/home/tegao/infra-token-replay/dense-formal-01.spec.json",
+        "--output",
+        "/home/tegao/infra-token-replay/dense-formal-01"
+      ],
+      "env": {}
+    },
+    {
+      "name": "dense-summary",
+      "cmd": [
+        "/home/tegao/infra-token-replay/.harness/bin/python",
+        "/home/tegao/infra-token-replay/summarize_campaign.py",
+        "--campaign",
+        "/home/tegao/infra-token-replay/dense-formal-01",
+        "--output",
+        "/home/tegao/infra-token-replay/dense-formal-01-summary.json"
+      ],
+      "env": {}
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "wait_for": "/home/tegao/infra-token-replay/moe-perturbation-stages-01/status.json",
+  "stages": [
+    {
+      "name": "compare-recorder",
+      "env": {},
+      "cmd": [
+        "/home/tegao/infra-token-replay/.harness/bin/python",
+        "/home/tegao/infra-token-replay/compare_recorder.py",
+        "--root",
+        "/home/tegao/infra-token-replay",
+        "--output",
+        "/home/tegao/infra-token-replay/moe-recorder-paired-summary.json"
+      ]
+    }
+  ]
+}

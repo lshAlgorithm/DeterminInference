@@ -1,0 +1,19 @@
+{
+  "wait_for": "/home/tegao/infra-token-replay/moe-stages-01/status.json",
+  "stages": [
+    {
+      "name": "compare",
+      "env": {},
+      "cmd": [
+        "/home/tegao/infra-token-replay/.harness/bin/python",
+        "/home/tegao/infra-token-replay/compare_rank_profiles.py",
+        "--summary",
+        "/home/tegao/infra-token-replay/moe-rank-profile-01-summary.json",
+        "--spec",
+        "/home/tegao/infra-token-replay/moe-rank-profile-01.spec.json",
+        "--output",
+        "/home/tegao/infra-token-replay/moe-rank-comparison.json"
+      ]
+    }
+  ]
+}
