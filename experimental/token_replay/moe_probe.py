@@ -31,5 +31,24 @@ def guard_gpus() -> list[dict]:
     return devices
 
 
+def model_manifest(model: Path) -> dict:
+    index = json.loads((model / "model.safetensors.index.json").read_text())
+    shards = sorted(set(index["weight_map"].values()))
+    files = []
+    for name in ["config.json", "tokenizer_config.json", "model.safetensors.index.json", *shards]:
+        path = model / name
+        digest = hashlib.sha256()
+        with path.open("rb") as stream:
+            while chunk := stream.read(8 << 20):
+                digest.update(chunk)
+        files.append(dict(name=name, size_bytes=path.stat().st_size, sha256=digest.hexdigest()))
+    return dict(
+        model="Qwen/Qwen1.5-MoE-A2.7B-Chat",
+        revision="ec052fda178e241c7c443468d2fa1db6618996be",
+        declared_weight_bytes=index["metadata"]["total_size"],
+        files=files,
+    )
+
+
 if __name__ == "__main__":
     raise SystemExit("use an explicit diagnostic entrypoint")
