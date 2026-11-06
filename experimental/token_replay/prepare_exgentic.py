@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import random
 from collections import Counter
 from pathlib import Path
@@ -67,7 +68,7 @@ def encode_span(span: dict[str, Any], tokenizer: Any) -> dict[str, Any]:
         raise ValueError("target_context_over_16384")
     start = _timestamp_ms(span["start_time"]) / 1000
     end = _timestamp_ms(span["end_time"]) / 1000
-    if not __import__("math").isfinite(start + end) or end < start:
+    if not math.isfinite(start + end) or end < start:
         raise ValueError("invalid_source_timing")
     return {
         "start": start,
