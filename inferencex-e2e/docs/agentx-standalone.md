@@ -54,6 +54,31 @@ regardless of model family; it does not configure the standalone `agentx` CLI.
 The default random seed is **42**. Keep this seed when reproducing AgentX results,
 or pass `--random-seed 123` to use a different seed.
 
+## Exact-token experiment route
+
+The meeting experiment uses the same `agentx profile` scenario and scheduler
+with a local Weka trace containing paired `input_ids` and `output_ids`. Set
+`AGENTX_TOKEN_TRACE` to that trace, `AGENTX_REPLAY_MODE` to `generated` or
+`recorded`, and provide the patched `agentx-harness==1.0.13` wheel plus its
+`AGENTX_HARNESS_SHA256`. The wrapper validates the digest before installing the
+wheel and passes the trace through `--input-file`; it does not use the public
+hash-only Weka corpus in this mode. Recorded prompt IDs already include the
+target chat formatting, so do not enable `--apply-chat-template`.
+
+```bash
+export AGENTX_TOKEN_TRACE="$PWD/recorded-weka"
+export AGENTX_REPLAY_MODE=recorded
+export AGENTX_HARNESS_WHEEL="$PWD/agentx_harness-1.0.13-py3-none-any.whl"
+export AGENTX_HARNESS_SHA256="<sha256 of the wheel>"
+python3 -m infx.bench agentic
+```
+
+`generated` keeps normal sampling and discards the response for the control;
+`recorded` supplies the paired response IDs before the next normal forward.
+Both modes preserve the original AgentX warmup, snapshot, spawn/join, and
+session-isolation behavior. Exact-token runs are experimental local traces and
+are stamped `submission_valid=false`.
+
 Allow additional time for dataset preparation, warmup, and draining requests.
 To sweep, restart the server for every `CONC` value and use a fresh output
 directory. Do not flush caches or reuse a live server across concurrency points. Match the target
