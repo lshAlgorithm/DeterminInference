@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=2,3 PYTHONPATH=/home/tegao/infra-token-replay/python CUDA_HOME=/home/tegao/infra-token-replay/cuda-toolkit /home/tegao/infra-token-replay/.venv/bin/python /home/tegao/infra-token-replay/moe_probe.py --model /home/tegao/infra-token-replay/models/Qwen1.5-MoE-A2.7B-Chat --output /home/tegao/infra-token-replay/moe-results-ep2-run3 --ep-size 2 --record
