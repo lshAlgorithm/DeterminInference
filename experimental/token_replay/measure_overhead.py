@@ -14,6 +14,11 @@ def request_json(url: str, endpoint: str, payload: dict | None = None):
     data = json.dumps(payload).encode() if payload is not None else None
     request = urllib.request.Request(url + endpoint, data, {'Content-Type':'application/json'})
     with urllib.request.urlopen(request, timeout=600) as response:
+        if endpoint == '/flush_cache':
+            body = response.read().decode()
+            if response.status != 200 or not body.startswith('Cache flushed.'):
+                raise RuntimeError(body)
+            return True
         return json.load(response)
 
 
