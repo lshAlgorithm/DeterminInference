@@ -147,6 +147,17 @@ AgentX workload or the data population. Maximum calculated replay payloads were
 metadata payload sizes, not measured incremental allocator or peak GPU memory.
 Raw results are in [dense-overhead-02.json](../../experimental/token_replay/evidence/dense-overhead-02.json).
 
+The retained storage-maintenance fixture spans batch sizes1/32/128 with mixed
+ordinary/replay requests and uneven response lengths. Across its five cases,
+synchronized staging took0.379–3.369ms, median metadata filtering10.13–19.07us,
+and median merging16.28–18.89us. The fixture packs1024–359424 token-payload bytes;
+these sizes exclude metadata and allocator retention. Its separate CUDA-event
+kernel probe measured approximately0.98–1.17us per replacement for batch sizes
+1–512. These fixture timings explain component costs; only the matched HTTP
+experiment above supplies the scoped3% decision. Source, timing protocol and
+samples are retained in `profile_replay.py`, `replay-profile-compact.log` and
+`replay-kernel-compact.log`.
+
 ## Public Weka reference qualification
 
 The original public corpus has393 traces but no complete trace qualifies at16K:
