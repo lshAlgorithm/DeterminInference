@@ -216,6 +216,25 @@ three-off mean. These descriptive estimates lack paired drift control;
 three additional alternating on/off pairs are running. The followup reports
 service time separately from workload wall time including recorder dumps.
 
+All9 representative full requests per content completed with their preceding
+session history. All36 expected rank trace files were parsed and paired. The
+following are sums of within-category GPU interval unions over those9 requests:
+
+| Content | Rank | Compute and other union (s) | Communication union (s) |
+| --- | ---: | ---: | ---: |
+| Real | 0 | 13.42556 | 2.86225 |
+| Real | 1 | 13.66391 | 2.62090 |
+| Synthetic | 0 | 13.45985 | 2.84153 |
+| Synthetic | 1 | 13.63268 | 2.59123 |
+
+Communication classification matches actual NCCL AllReduce and AllGather kernel
+names. Categories overlap across streams and ranks; do not add them as wall
+time. These are single-pass profiler-on diagnostics for9/308 selected requests,
+with no repeated-profile interval, and cannot establish whole-workload GPU
+compute or communication effects. Per-request pairs, kernel names and sums are
+retained in [rank comparison](../../experimental/token_replay/evidence/moe-rank-comparison.json)
+and the raw trace archive.
+
 ## Review and remaining completion gates
 
 Fresh Codex reviews found and prompted fixes for target-template argument
@@ -228,6 +247,6 @@ cross-family review or dual-review acceptance is claimed.
 
 The original-path implementation/short acceptance and capacity qualification are
 complete. The full Dense matrix, public-Weka GPU run,
-MoE recorder/control perturbation and representative per-rank timing, final
+MoE paired recorder/control perturbation, final
 result interpretation, and final PR validation remain completion gates. Running
 jobs and partial tables do not satisfy those gates.
