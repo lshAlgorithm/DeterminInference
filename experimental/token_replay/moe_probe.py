@@ -28,13 +28,13 @@ def guard_gpus() -> list[dict]:
             part.strip() for part in row.split(",")
         ]
         if index in {"2", "3"}:
-            device = dict(
-                index=int(index),
-                name=name,
-                used_mib=int(used),
-                total_mib=int(total),
-                utilization=int(utilization),
-            )
+            device = {
+                "index": int(index),
+                "name": name,
+                "used_mib": int(used),
+                "total_mib": int(total),
+                "utilization": int(utilization),
+            }
             if device["used_mib"] >= 500:
                 raise RuntimeError(f"GPU {index} is occupied: {device}")
             devices.append(device)
