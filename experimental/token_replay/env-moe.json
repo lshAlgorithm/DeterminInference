@@ -41,7 +41,7 @@
   "validation": {
     "imports": "verified versions; isolated environment unchanged",
     "kernel_witness": "run6 passed actual BF16 TP2/EP2 forward, exact32-token replay and followup cache",
-    "agent_follows_doc": "run6 passed; updated ledger invocation run7 awaits fresh execution after recorder study",
+    "agent_follows_doc": "run6 passed; the documented run7 invocation supplies its own report and captured execution receipt",
     "scope": "Correctness feasibility witness, not AgentX performance or workload efficacy"
   }
 }

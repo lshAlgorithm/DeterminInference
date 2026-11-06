@@ -1,9 +1,9 @@
-### env: moe@29da0d08
+### env: moe@007d4986
 how: reuse isolated /home/tegao/infra-token-replay/.venv; no shared environment modifications
 tier: GPU2,3; RTX4090 24GiB each; TP2/EP2 BF16; seed42
 spec: experimental/token_replay/env-moe.json
 weights: /home/tegao/infra-token-replay/models/Qwen1.5-MoE-A2.7B-Chat
-validated: run6 independent agent invocation passed forward, exact replay and followup cache; full308-request workload and both-rank recorder coverage also passed separately; current documented run7 awaits fresh execution after recorder study
+validated: run6 independent agent invocation passed forward, exact replay and followup cache; full308-request workload and both-rank recorder coverage also passed separately; current documented run7 must have its own successful report and captured execution receipt before readiness is claimed
 gotcha: JIT needs existing conda bin/ninja on PATH. Render chat template to text then encode for flat token IDs. Recorder directory must be supplied explicitly.
 
 Invocation on gpu6 (output must not exist):
