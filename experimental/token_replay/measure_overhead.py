@@ -33,8 +33,16 @@ def measure_overhead(url: str, source: Path, output: Path) -> dict:
             assert request_json(url, '/flush_cache')
             params = [{'temperature':0,'sampling_seed':42,'ignore_eos':True,'max_new_tokens':len(row['output_ids'])} for _,_,row in batch]
             reference.append(request_json(url, '/generate', {'input_ids':[row['input_ids'] for _,_,row in batch], 'sampling_params':params}))
+        first_use = []
+        for batch, expected in zip(batches, reference, strict=True):
+            assert request_json(url, '/flush_cache')
+            params = [{'temperature':0,'sampling_seed':42,'ignore_eos':True,'max_new_tokens':len(result['output_ids']),'replay_token_ids':result['output_ids']} for result in expected]
+            started = time.perf_counter()
+            warmed = request_json(url, '/generate', {'input_ids':[row['input_ids'] for _,_,row in batch], 'sampling_params':params})
+            first_use.append(time.perf_counter()-started)
+            assert [r['output_ids'] for r in warmed] == [r['output_ids'] for r in expected]
         paired = []
-        condition = {'concurrency':concurrency, 'pairs':paired, 'reference':reference}
+        condition = {'concurrency':concurrency, 'pairs':paired, 'reference':reference, 'unmeasured_replay_warmup_batch_seconds':first_use}
         report['conditions'].append(condition)
         for repeat in range(5):
             pair = {'repeat':repeat,'arms':{}}
