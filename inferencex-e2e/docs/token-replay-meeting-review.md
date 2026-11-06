@@ -2,10 +2,13 @@
 
 The original `agentx profile` route now accepts complete recorded token IDs,
 retains the AgentX scheduler, snapshot warmup, spawn/join and session isolation,
-and runs through the InferenceX result collector. The full performance study is
-still incomplete. A fixed32-prompt HTTP mechanism experiment meets the scoped
-3% target below; workload-wide effects await the full AgentX matrix. Acceptance
-runs do not establish an improvement in benchmark accuracy.
+and runs through the InferenceX result collector. The full36-point Dense matrix
+and the MoE study are complete. A fixed32-prompt HTTP mechanism experiment meets
+the scoped3% target. Roomy-cache Dense throughput point estimates improve by
+0.088%/0.569%/0.847% at concurrency1/4/8; pressure concurrency4/8 and MoE content
+throughput intervals span zero. All447 qualified Dense requests pass the
+from-start exact-ID reference. Deterministic delivery checks pass; the final
+independent report review remains pending at this frozen revision.
 
 ## Implementation
 
@@ -31,6 +34,13 @@ storage is packed on device, with metadata-only batch filtering/merging and no
 replay state once the last forced request exits. Model embedding lookup remains
 normal. Full-trace requests that exceed tokenizer or scheduler admission budgets
 are rejected, including the one-token warmup prompt boundary.
+
+The guarantee concerns recorded token trajectories and the tokens represented
+by the cache. It does not make floating-point KV tensors bitwise identical
+across different batch shapes or replace all engine determinism mechanisms.
+Recorded IDs are staged before use; normal embedding lookup remains part of
+the model forward. The measured costs below do not identify embedding lookup
+as a replay-specific bottleneck that would justify precomputing embeddings.
 
 ## Qualified data
 
@@ -182,6 +192,71 @@ This is actual component allocator evidence for the selected responses, not
 whole-serving incremental VRAM or a population maximum. It does not replace
 HTTP end-to-end overhead measurement.
 
+## Complete Dense results
+
+The frozen36-point matrix completed25755 profiling requests and1716 warmup
+requests with zero errors, skips or cancellations. The profiling phases
+produced3154752 output tokens over32485.970 seconds including drain; the
+admission windows total32400 seconds. Every cell has three paired repetitions.
+
+| KV capacity | Concurrency | Standardized cache change, percentage points [95% interval] | Output throughput change, % [95% interval] |
+| --- | ---: | ---: | ---: |
+| 131072 | 1 | +1.6539 [+1.6539, +1.6539] | +0.0882 [+0.0879, +0.0885] |
+| 131072 | 4 | +1.6642 [+1.6541, +1.6743] | +0.5689 [+0.2780, +0.8598] |
+| 131072 | 8 | +1.6578 [+1.6379, +1.6776] | +0.8466 [+0.5355, +1.1577] |
+| 16384 | 1 | +1.6539 [+1.6539, +1.6539] | +0.0881 [+0.0880, +0.0883] |
+| 16384 | 4 | +1.1607 [+0.6704, +1.6509] | +0.2510 [-0.7504, +1.2524] |
+| 16384 | 8 | -0.0524 [-0.1093, +0.0045] | -0.0237 [-0.2129, +0.1656] |
+
+Cache standardization uses source rows common to each pair. These are per-cell
+Student-t intervals across repeated execution of the fixed seed42 workload,
+not source-population intervals or simultaneous coverage across all cells.
+Identical fixed-seed cache counts at concurrency1 give zero observed repeat
+variance; that does not imply population certainty. Closed-loop timing changes
+the actual mix and number of requests, so throughput retains those denominators.
+
+The roomy results support a repeatable cache-reuse effect from generated-token
+drift on this workload. Actual-mix mean TTFT changes from124.80 to112.65ms,
+121.53 to101.62ms and134.29 to124.11ms at concurrency1/4/8. Those latency values
+are descriptive arm-level means, without common-source latency correction.
+The corresponding per-GPU output throughput is30.233 to30.260,110.892 to111.522,
+and219.248 to221.104 tokens/s. Per-user output throughput and inter-token
+latency are retained in the detailed tables; cache changes do not translate
+proportionally into overall throughput.
+
+Pressure concurrency8 has about10% cache hits in both modes and no established
+cache or throughput separation. Across its three profiling repeats, generated
+mode has6 retractions and recorded mode8. Pressure concurrency4 has0 versus3;
+all roomy cells have0. Both capacities evict tokens, including stale independent
+sessions in the roomy condition. Replay therefore does not establish a general
+remedy for capacity pressure or retraction work. Response-usage new prefill
+counts do not separately measure internal retraction recomputation or GPU FLOPs.
+
+Dense warmup totals968.132 seconds and7201590 new prefill tokens, separately
+from48697693 new prefill tokens during profiling. Server initialization ranges
+from25.031 to51.067 seconds per point. Five-second GPU0 memory samples reach
+7426–13772MiB depending on capacity and concurrency. The maximum across repeats
+matches between modes in each cell; this sampling granularity cannot establish
+zero incremental replay memory. The allocator probe above supplies the separate
+component measurement.
+
+[Complete Dense tables](../../experimental/token_replay/dense-results.md) include
+per-user/per-GPU throughput, TTFT/ITL, actual request counts, cache residency,
+evictions, retractions, phase costs and links to the full72-row CSV and source
+aggregates. The independent
+[from-start reference](../../experimental/token_replay/evidence/dense-corpus-reference.json)
+executes all32 qualified sessions and447 requests with exact output ID and
+length-finish checks while retaining normal stochastic sampling before replacement.
+It is a correctness reference, not an independent performance baseline.
+Performance-run source-length checks are separate and do not retrospectively
+prove ID equality for every performance repetition.
+
+The [delivery verifier](../../experimental/token_replay/evidence/delivery-verification.json)
+passes the exact36-cell grid,900-second conditions, source lengths and counts,
+all447 reference outputs and completed MoE, overhead and storage gates. Raw
+Dense records, server/client commands, receipts, metrics and the reference run
+are in the [Dense evidence archive](../../experimental/token_replay/evidence/dense-formal-evidence-20261106.tar.gz).
+
 ## Public Weka reference qualification
 
 The original public corpus has393 traces but no complete trace qualifies at16K:
@@ -216,6 +291,16 @@ the900-second profiling throughput denominator, not hidden as free preparation.
 Five-second GPU0 samples reached13848MiB. Profiling prefix-resident cache sampled
 maximum131040 tokens; allocated KV reached131065, including in-flight suffixes.
 Those are sampled counts, not instantaneous peaks or replay-specific VRAM costs.
+
+The pinned harness waits for accelerated-warmup wire requests to drain before
+profiling handoff. An independent
+[request-boundary audit](../../experimental/token_replay/evidence/phase-boundary-final.json)
+checks all36 Dense runs and this public reference: every warmup HTTP request
+ends before the first profiling request, with gaps of9.430–104.740ms. Thus this
+version has no observed overlap of recorded warmup and profiling HTTP requests.
+That is not a GPU event timeline, evidence of zero warmup cost, or proof that a
+one-token snapshot primer equals complete historical replay. Removing warmup
+would change the benchmark's starting-cache contract and is not claimed as a fix.
 
 ## MoE experiment protocol
 
@@ -318,8 +403,23 @@ Deterministic/live checks support the specific claims above. Codex positive
 reviews remain provisional. No `claude-review` MCP tool was available, so no
 cross-family review or dual-review acceptance is claimed.
 
-The original-path implementation/short acceptance and capacity qualification are
-complete. The full Dense matrix,
-the all-corpus Dense correctness reference, final result interpretation, and
-final PR validation remain completion gates. Running
-jobs and partial tables do not satisfy those gates.
+The original-path implementation, short acceptance, full Dense matrix, all-corpus
+reference and MoE study are complete. Final independent report review remains
+pending at this frozen revision.
+
+## Meeting requirement disposition
+
+| Requirement | Delivered result and boundary |
+| --- | --- |
+| Original InferenceX/AgentX route | Pinned harness integration, original default-route Weka run, scheduler/DAG/snapshot/salt acceptance and nonofficial token-mode provenance. |
+| Low-overhead per-token replacement | Normal forward/sampling retained; packed device token storage, metadata-only batch maintenance and replacement before next forward. Scoped matched-output HTTP target passes; no universal overhead guarantee. |
+| KV behavior | Full same-content paired matrix with source-conditioned cache counts, sampled residency, evictions and retractions. Roomy cache reuse improves; pressure c8 does not establish improvement. No claim of bitwise KV equality or reduced GPU FLOPs. |
+| Warmup concern | All37 audited runs drain warmup HTTP requests before profiling. Warmup compute and cache-state effects are measured separately; no removal or concurrent GPU-interference conclusion is claimed. |
+| Public hash-only traces | Original true replies cannot be recovered. Public reference stays separate; target-tokenized Exgentic content and explicit synthetic controls carry the content tests. |
+| MoE and multiple GPUs | Full308-request real/synthetic service and both-rank routing coverage, fixed TP2/EP2 placement and EPLB off, representative9-request rank timing and paired recorder-cost controls. Whole-workload rank timing is not established. |
+| Reproducibility and delivery | Seed42, source/model hashes, function-scoped commits, two dependency patches, Git LFS logs, complete tables, commands and a local bilingual PR draft. No upstream publication or maintainer acceptance is implied. |
+| Review | Deterministic delivery checks pass; earlier independent Codex reviews are provisional. Claude-review is unavailable; final report review is pending at this freeze. |
+
+The measurements support reproducible trajectory replay as a benchmark-fidelity
+improvement. They do not establish general engine acceleration, a full removal
+of warmup, or a causal MoE routing-to-GPU-time mechanism.

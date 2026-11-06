@@ -82,6 +82,14 @@ tokens, drain denominator, evictions, retractions and sampled residency.
 Non-evictable token usage is not total resident cache size. Five-second memory
 samples are not instantaneous allocation peaks.
 
+The [complete36-point Dense tables](dense-results.md) link the72-row phase CSV
+and source-level summaries. `export_dense_table.py` exports those phase rows.
+`audit_phase_boundary.py` checks actual warmup/profiling HTTP request intervals;
+it does not measure GPU event overlap or remove warmup's initial-cache effect.
+The separate all447-request `audit_dense_corpus.py` run checks exact output IDs
+from session starts. Performance-run usage checks establish lengths and cache
+counts, not retrospective token-ID equality for every performance repetition.
+
 For MoE, run `audit_moe_recorder.py` on both content directories, writing
 `coverage-audit.json`, then `summarize_moe.py`. The audit checks both replicas,
 input IDs/positions, expert placement and per-layer assignment counts. In this

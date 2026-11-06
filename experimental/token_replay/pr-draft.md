@@ -23,13 +23,24 @@ at concurrency1/4/8. The full308-request MoE recorder-off comparison found a
 synthetic-relative-to-real throughput difference of+0.2336% (95% interval
 [-0.0285%, +0.4958%]); it does not establish a throughput effect.
 
-The fixed real-content AgentX performance matrix is not yet complete.
+The full36-point AgentX matrix completed25755 profiling and1716 warmup requests
+with zero errors. Roomy-cache source-standardized cache hits increase by about
+1.65–1.66 percentage points; throughput point estimates increase by
+0.088%/0.569%/0.847% at concurrency1/4/8. Pressure concurrency4/8 throughput
+intervals span zero. The [complete tables](dense-results.md) retain phase costs,
+request mix, per-user/per-GPU throughput, latency, residency and retractions.
+An independent from-start reference checks exact output IDs for all447 qualified
+Dense requests; [deterministic delivery checks](evidence/delivery-verification.json)
+pass. Performance-run length checks are not retrospective per-request ID audits.
+
+All37 audited Dense/public runs drain warmup HTTP requests before profiling;
+warmup still contributes substantial cache work and changes starting state.
 MoE routing coverage, nine-request dual-rank diagnostics and three paired recorder
 controls completed; recorder service overhead is about21%, so content-performance
 claims use recorder-off measurements. The acceptance fixture is synthetic and is not an original Weka score;
 Exgentic content is re-tokenized for the target model, with processed timing and
 no invented DAG. The available review is Codex-only: Claude-review was unavailable.
-No completed cross-family review or workload-wide performance improvement is claimed.
+No completed cross-family review or general performance improvement is claimed.
 
 <details><summary>Implementation and validation evidence</summary>
 
@@ -64,7 +75,9 @@ forward 前替换记录 ID。本地扩展实验明确标记为非官方提交结
 
 原 InferenceX 入口已完成 240 个请求的精确 ID 与事件验收，零请求错误。
 MoE 完整路由覆盖、代表请求双卡诊断与三对 recorder 控制已完成。
-完整 Dense 性能矩阵仍在运行，当前结果不代表会议目标全部解决；
-Claude 审阅缺失，也不声称双审通过。
+Dense 的36点矩阵已完成，25755个正式请求和1716个预热请求零错误。
+宽裕KV下缓存命中率约提高1.65–1.66个百分点，吞吐增幅点估计小于1%；
+压力档并发4／8未建立吞吐差异。已核验37次运行的预热HTTP请求先于正式请求结束，
+但预热成本和初始缓存影响仍需单独报告。Claude审阅缺失，不声称双审通过。
 
 </details>
