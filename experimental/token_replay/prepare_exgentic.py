@@ -66,6 +66,17 @@ def encode_span(span: dict[str, Any], tokenizer: Any) -> dict[str, Any]:
         raise ValueError("empty_source_response")
     if any(message.get("reasoning_content") for message in messages + outputs):
         raise ValueError("reasoning_semantics_not_qualified_for_target_template")
+    for message in messages + outputs:
+        for call in message.get("tool_calls", []):
+            arguments = call["function"]["arguments"]
+            if isinstance(arguments, str):
+                try:
+                    arguments = json.loads(arguments)
+                except json.JSONDecodeError as error:
+                    raise ValueError("tool_arguments_are_not_valid_json") from error
+            if not isinstance(arguments, dict):
+                raise ValueError("tool_arguments_are_not_an_object")
+            call["function"]["arguments"] = arguments
     tools = _normalize_tools(attributes.get("gen_ai.tool.definitions"))
     template_args = {"tools": tools} if tools else {}
     prompt = tokenizer.apply_chat_template(
