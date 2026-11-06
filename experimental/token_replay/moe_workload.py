@@ -25,7 +25,6 @@ def run_workload(engine, source: Path, output: Path, record: bool, profile: bool
                 if profile and index > max(targets[path.name]):
                     break
                 profiling = profile and index in targets[path.name]
-                profile_stopped = False
                 if profiling:
                     engine.start_profile(output_dir=str(output), activities=['CPU', 'GPU'], with_stack=False, record_shapes=False, profile_prefix=f'{path.stem}-row{index}')
                 params = {'temperature': 0, 'max_new_tokens': len(request['output_ids']), 'ignore_eos': True, 'sampling_seed': 42, 'replay_token_ids': request['output_ids']}
@@ -35,11 +34,8 @@ def run_workload(engine, source: Path, output: Path, record: bool, profile: bool
                 for result in engine.generate(input_ids=request['input_ids'], sampling_params=params, stream=True):
                     if first is None and result.get('output_ids'):
                         first = time.perf_counter()
-                    if profiling and not profile_stopped and len(result.get('output_ids', [])) >= 32:
-                        engine.stop_profile()
-                        profile_stopped = True
                 ended = time.perf_counter()
-                if profiling and not profile_stopped:
+                if profiling:
                     engine.stop_profile()
                 assert result['output_ids'] == request['output_ids'], (path.name, index, result)
                 assert result['meta_info']['finish_reason']['type'] == 'length'
