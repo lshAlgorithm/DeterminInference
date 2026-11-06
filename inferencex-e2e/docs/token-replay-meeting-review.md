@@ -161,8 +161,26 @@ A scoped `CPATH` points at existing cuRAND headers and a project-specific
 FlashInfer cache isolates the rebuild. A fresh agent executed the documented
 seed42 top-k/top-p witness verbatim: actual kernel dispatch, valid sampled IDs
 and repeated-seed equality passed. No package upgrade was needed.
-`weka-original-04` is the new full public-route attempt; successful completion
-is required before the queued Dense matrix starts.
+`weka-original-04` completed the original public route:7 eligible traces,
+4 active trajectories,44 warmup and84 profiling requests, zero errors. The
+900-second profiling phase produced44465 output tokens (49.4055 tokens/s),
+with2260960/3344115 prompt tokens cached (67.6101%). These are descriptive
+numbers for the64K reference, not a cross-dataset improvement baseline. The
+Dense36-point matrix started only after this completion receipt.
+
+Original warmup serves two purposes: snapshot primers recreate pre-start cache
+state, then accelerated live-trajectory replay adds10 requests per lane with
+zero idle delay and one generated token per request. It warms cache pressure
+and carries active state into profiling; it does not regenerate each historical
+reply. In this public run all44 warmup outputs had length1, but their full
+prompts required1349059 new prefill tokens and340.261 seconds, versus1083155
+new prefill tokens during profiling. Model load/CUDA-graph initialization was a
+separate29.046 seconds. Warmup cost is therefore material and is reported outside
+the900-second profiling throughput denominator, not hidden as free preparation.
+
+Five-second GPU0 samples reached13848MiB. Profiling prefix-resident cache sampled
+maximum131040 tokens; allocated KV reached131065, including in-flight suffixes.
+Those are sampled counts, not instantaneous peaks or replay-specific VRAM costs.
 
 ## MoE experiment protocol
 
@@ -233,7 +251,7 @@ time. These are single-pass profiler-on diagnostics for9/308 selected requests,
 with no repeated-profile interval, and cannot establish whole-workload GPU
 compute or communication effects. Per-request pairs, kernel names and sums are
 retained in [rank comparison](../../experimental/token_replay/evidence/moe-rank-comparison.json)
-and the raw trace archive.
+and the [raw trace/recorder archive](../../experimental/token_replay/evidence/moe-routing-rank-evidence-20261106.tar.gz).
 
 ## Review and remaining completion gates
 
@@ -246,7 +264,7 @@ reviews remain provisional. No `claude-review` MCP tool was available, so no
 cross-family review or dual-review acceptance is claimed.
 
 The original-path implementation/short acceptance and capacity qualification are
-complete. The full Dense matrix, public-Weka GPU run,
+complete. The full Dense matrix,
 MoE paired recorder/control perturbation, final
 result interpretation, and final PR validation remain completion gates. Running
 jobs and partial tables do not satisfy those gates.

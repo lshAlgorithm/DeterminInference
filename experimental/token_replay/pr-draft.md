@@ -31,6 +31,7 @@ No completed cross-family review or workload-wide performance improvement is cla
 
 <details><summary>Implementation and validation evidence</summary>
 
+- [Reproduction guide](README.md) and [harness patch](agentx-harness-v1.0.13.patch), against tag `agentx-v1.0.13`.
 - [SGLang patch](sglang-v0.5.10.patch), against base `1519acf`.
 - [Exact deployed source archive](evidence/serving-source-20261106.tar.gz).
 - [Dense matrix specification](dense-formal-01.spec.json), frozen after successful
