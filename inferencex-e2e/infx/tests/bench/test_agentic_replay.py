@@ -220,3 +220,22 @@ def test_token_trace_uses_original_scenario_without_public_prefetch(tmp_path):
     assert _value(argv, "--random-seed") == "42"
     assert "--public-dataset" not in argv
     assert "--unsafe-override" in argv
+
+
+@pytest.mark.parametrize("overrides", [
+    {"AGENTX_REPLAY_MODE": "bad"},
+    {"AGENTX_REPLAY_MODE": ""},
+    {"FRAMEWORK": "vllm"},
+    {"AGENTX_HARNESS_SHA256": ""},
+    {"AIPERF_APPLY_CHAT_TEMPLATE": "true"},
+])
+def test_invalid_token_experiment_rejected_before_bootstrap(tmp_path, overrides):
+    trace = tmp_path / "trace.json"
+    trace.write_text("{}")
+    env = {
+        **BASE_ENV, "FRAMEWORK": "sglang", "AGENTX_TOKEN_TRACE": str(trace),
+        "AGENTX_REPLAY_MODE": "recorded", "AGENTX_HARNESS_WHEEL": "/patched.whl",
+        "AGENTX_HARNESS_SHA256": "f" * 64, **overrides,
+    }
+    with pytest.raises(InputError):
+        ReplayConfig.from_env(env, tmp_path)
