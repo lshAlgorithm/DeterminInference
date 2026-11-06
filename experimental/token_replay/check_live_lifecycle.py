@@ -46,8 +46,9 @@ def check_live_lifecycle(url: str, traces: Path) -> dict:
             assert error.code == 400 and 'token replay' in body and ('budget' in body or 'truncation' in body), (error.code, body)
             rejected.append({'status': error.code, 'body': body})
         else:
-            assert result['meta_info']['finish_reason']['type'] == 'abort', result
-            rejected.append(result['meta_info']['finish_reason'])
+            reason = result['meta_info']['finish_reason']
+            assert reason['type'] == 'abort' and 'token replay' in json.dumps(reason) and 'budget' in json.dumps(reason), result
+            rejected.append(reason)
     return {'passed': True, 'seed': 42, 'reference_from_start': reference, 'mixed_lengths': [len(x['output_ids']) for x in mixed], 'normal_after_mixed_matches': True, 'oversized_rejections': rejected, 'scope': 'sequential reference, mixed lifecycle and HTTP admission correctness; no performance claim'}
 
 
