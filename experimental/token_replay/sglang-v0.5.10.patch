@@ -44,11 +44,52 @@ index e947a48..fa42f7e 100644
          # Attach logprobs to logits_output (in-place modification)
          if return_logprob:
              if SGLANG_RETURN_ORIGINAL_LOGPROB:
+diff --git a/python/sglang/srt/managers/scheduler.py b/python/sglang/srt/managers/scheduler.py
+index 67af2d0..1f37e22 100644
+--- a/python/sglang/srt/managers/scheduler.py
++++ b/python/sglang/srt/managers/scheduler.py
+@@ -1610,13 +1610,22 @@ class Scheduler(
+         self._check_pending_flush()
+ 
+     def init_req_max_new_tokens(self, req):
++        available_tokens = self.max_req_len - len(req.origin_input_ids) - 1
++        if (
++            req.sampling_params.replay_token_ids is not None
++            and len(req.sampling_params.replay_token_ids) > available_tokens
++        ):
++            req.set_finish_with_abort(
++                "token replay exceeds the scheduler's full-trace token budget"
++            )
++            return
+         req.sampling_params.max_new_tokens = min(
+             (
+                 req.sampling_params.max_new_tokens
+                 if req.sampling_params.max_new_tokens is not None
+                 else 1 << 30
+             ),
+-            self.max_req_len - len(req.origin_input_ids) - 1,
++            available_tokens,
+         )
+ 
+     def _process_and_broadcast_mm_inputs(
 diff --git a/python/sglang/srt/managers/tokenizer_manager.py b/python/sglang/srt/managers/tokenizer_manager.py
-index 8142432..ef2ffcf 100644
+index 8142432..6da9c2b 100644
 --- a/python/sglang/srt/managers/tokenizer_manager.py
 +++ b/python/sglang/srt/managers/tokenizer_manager.py
-@@ -945,6 +945,15 @@ class TokenizerManager(TokenizerCommunicatorMixin, TokenizerManagerScoreMixin):
+@@ -791,6 +791,12 @@ class TokenizerManager(TokenizerCommunicatorMixin, TokenizerManagerScoreMixin):
+         input_token_num = len(input_ids) if input_ids is not None else 0
+         input_token_num += self.num_reserved_tokens
+ 
++        replay_ids = obj.sampling_params.get("replay_token_ids")
++        if replay_ids is not None and (
++            not input_ids or input_token_num + len(replay_ids) > self.context_len - 2
++        ):
++            raise ValueError("token replay must fit the full trace without truncation")
++
+         # Validate input length
+         if input_token_num >= self.context_len:
+             if self.server_args.allow_auto_truncate:
+@@ -945,6 +951,15 @@ class TokenizerManager(TokenizerCommunicatorMixin, TokenizerManagerScoreMixin):
          sampling_params = self.sampling_params_class(**sampling_kwargs)
          sampling_params.normalize(self.tokenizer)
          sampling_params.verify(self.model_config.vocab_size)
@@ -298,206 +339,3 @@ index 0000000..24532b7
 +            sampled.numel(),
 +            128,
 +        )
-diff --git a/python/sglang/test/test_token_replay_http.py b/python/sglang/test/test_token_replay_http.py
-new file mode 100644
-index 0000000..0127fcd
---- /dev/null
-+++ b/python/sglang/test/test_token_replay_http.py
-@@ -0,0 +1,197 @@
-+import json
-+import os
-+import subprocess
-+import sys
-+import time
-+import unittest
-+from concurrent.futures import ThreadPoolExecutor
-+from pathlib import Path
-+
-+import requests
-+from transformers import AutoTokenizer
-+
-+from sglang.srt.utils import kill_process_tree
-+
-+
-+class TestTokenReplayHTTP(unittest.TestCase):
-+    @classmethod
-+    def setUpClass(cls):
-+        cls.model = os.environ["REPLAY_TEST_MODEL"]
-+        cls.url = os.environ["REPLAY_TEST_URL"]
-+        cls.tokenizer = AutoTokenizer.from_pretrained(cls.model)
-+        cls.process = subprocess.Popen(
-+            [
-+                sys.executable,
-+                "-m",
-+                "sglang.launch_server",
-+                "--model-path",
-+                cls.model,
-+                "--host",
-+                "127.0.0.1",
-+                "--port",
-+                cls.url.rsplit(":", 1)[1],
-+                "--random-seed",
-+                "42",
-+                "--mem-fraction-static",
-+                "0.55",
-+                "--context-length",
-+                "4096",
-+                "--max-running-requests",
-+                "8",
-+                "--cuda-graph-max-bs",
-+                "8",
-+                "--attention-backend",
-+                "triton",
-+                "--log-level",
-+                "warning",
-+            ]
-+        )
-+        cls.addClassCleanup(kill_process_tree, cls.process.pid)
-+        deadline = time.monotonic() + 600
-+        while time.monotonic() < deadline:
-+            if cls.process.poll() is not None:
-+                raise RuntimeError(f"server exited: {cls.process.returncode}")
-+            try:
-+                if requests.get(cls.url + "/health", timeout=2).status_code == 200:
-+                    return
-+            except requests.RequestException:
-+                pass
-+            time.sleep(1)
-+        raise TimeoutError("test server did not become healthy")
-+
-+    def check_stream(self, index):
-+        prompt = self.tokenizer.encode(f"Explain the number {index}:")
-+        recorded = self.tokenizer.encode(
-+            f" Recorded answer {index}: blue sky and green trees."
-+        )
-+        payload = {
-+            "model": self.model,
-+            "prompt": prompt,
-+            "max_tokens": len(recorded),
-+            "replay_token_ids": recorded,
-+            "ignore_eos": True,
-+            "temperature": 0.8,
-+            "seed": 42,
-+            "stream": True,
-+            "stream_options": {"include_usage": True},
-+            "logprobs": 1,
-+        }
-+        text, tokens, chunks, usage, done = "", [], 0, None, False
-+        with requests.post(
-+            self.url + "/v1/completions", json=payload, stream=True, timeout=120
-+        ) as response:
-+            response.raise_for_status()
-+            for line in response.iter_lines():
-+                if not line.startswith(b"data: "):
-+                    continue
-+                data = line[6:]
-+                if data == b"[DONE]":
-+                    done = True
-+                    break
-+                chunk = json.loads(data)
-+                self.assertNotIn("error", chunk)
-+                chunks += 1
-+                if chunk.get("usage") is not None:
-+                    usage = chunk["usage"]
-+                for choice in chunk["choices"]:
-+                    text += choice["text"]
-+                    if choice.get("logprobs"):
-+                        tokens.extend(choice["logprobs"]["tokens"])
-+        self.assertTrue(done)
-+        self.assertGreater(chunks, 1)
-+        self.assertEqual(text, self.tokenizer.decode(recorded))
-+        self.assertEqual(tokens, [self.tokenizer.decode([token]) for token in recorded])
-+        self.assertEqual(usage["completion_tokens"], len(recorded))
-+        followup = prompt + recorded + self.tokenizer.encode(" Continue:")
-+        response = requests.post(
-+            self.url + "/generate",
-+            json={
-+                "input_ids": followup,
-+                "sampling_params": {
-+                    "max_new_tokens": len(recorded),
-+                    "ignore_eos": True,
-+                    "replay_token_ids": recorded,
-+                    "temperature": 0,
-+                    "sampling_seed": 42,
-+                },
-+                "return_logprob": True,
-+            },
-+            timeout=120,
-+        )
-+        response.raise_for_status()
-+        result = response.json()
-+        self.assertEqual(
-+            [x[1] for x in result["meta_info"]["output_token_logprobs"]], recorded
-+        )
-+        self.assertGreaterEqual(
-+            result["meta_info"]["cached_tokens"], len(prompt) + len(recorded) - 1
-+        )
-+        return {
-+            "index": index,
-+            "tokens": len(recorded),
-+            "chunks": chunks,
-+            "cached_tokens": result["meta_info"]["cached_tokens"],
-+        }
-+
-+    def test_concurrent_streams(self):
-+        with ThreadPoolExecutor(max_workers=4) as pool:
-+            results = list(pool.map(self.check_stream, range(8)))
-+        print(
-+            json.dumps({"seed": 42, "concurrent_streams": results}, indent=2),
-+            flush=True,
-+        )
-+
-+    def test_harness(self):
-+        command = [
-+            os.environ["REPLAY_HARNESS_BIN"],
-+            "profile",
-+            "--model",
-+            self.model,
-+            "--url",
-+            self.url,
-+            "--endpoint-type",
-+            "completions",
-+            "--streaming",
-+            "--input-file",
-+            os.environ["REPLAY_HARNESS_TRACE"],
-+            "--custom-dataset-type",
-+            "mooncake-trace",
-+            "--tokenizer",
-+            self.model,
-+            "--concurrency",
-+            "1",
-+            "--request-count",
-+            "2",
-+            "--random-seed",
-+            "42",
-+            "--no-server-metrics",
-+            "--ui",
-+            "none",
-+            "--export-level",
-+            "raw",
-+            "--artifact-dir",
-+            os.environ["REPLAY_HARNESS_OUTPUT"],
-+        ]
-+        print(json.dumps({"harness_command": command}), flush=True)
-+        subprocess.run(command, check=True, timeout=300)
-+        output_dir = Path(os.environ["REPLAY_HARNESS_OUTPUT"])
-+        output_files = list(output_dir.glob("*outputs.json"))
-+        self.assertEqual(len(output_files), 1)
-+        outputs = json.loads(output_files[0].read_text())["data"]
-+        self.assertEqual(len(outputs), 2)
-+        source = [
-+            json.loads(line)
-+            for line in Path(os.environ["REPLAY_HARNESS_TRACE"])
-+            .read_text()
-+            .splitlines()
-+        ]
-+        expected = [
-+            self.tokenizer.decode(row["payload"]["replay_token_ids"]) for row in source
-+        ]
-+        self.assertEqual([row["response_text"] for row in outputs], expected)
-+        self.assertEqual([row["turn_index"] for row in outputs], [0, 1])
-+        print(json.dumps({"harness_exact_outputs": "passed", "turns": 2}), flush=True)
-+
-+
-+if __name__ == "__main__":
-+    unittest.main()
