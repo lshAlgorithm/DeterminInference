@@ -27,7 +27,10 @@
     "download_endpoint": "https://hf-mirror.com"
   },
   "resource_shape": {
-    "gpu_indices": [2, 3],
+    "gpu_indices": [
+      2,
+      3
+    ],
     "gpu_type": "NVIDIA GeForce RTX 4090",
     "gpu_memory_mib_each": 24564,
     "tensor_parallel_size": 2,
@@ -36,9 +39,9 @@
     "initial_expert_location": "trivial"
   },
   "validation": {
-    "imports": "verified package metadata only; GPU witness pending",
-    "kernel_witness": "moe_probe.py --ep-size 2",
-    "agent_follows_doc": "pending",
-    "scope": "Correctness diagnostic, not original AgentX performance evidence"
+    "imports": "verified versions; isolated environment unchanged",
+    "kernel_witness": "run6 passed actual BF16 TP2/EP2 forward, exact32-token replay and followup cache",
+    "agent_follows_doc": "run6 passed; updated ledger invocation run7 awaits fresh execution after recorder study",
+    "scope": "Correctness feasibility witness, not AgentX performance or workload efficacy"
   }
 }
