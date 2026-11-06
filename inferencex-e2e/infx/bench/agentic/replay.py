@@ -53,6 +53,8 @@ class ReplayConfig:
     apply_chat_template: bool
     benchmark_grace_period: str | None
 
+    token_trace: Path | None = None
+
     @classmethod
     def from_env(cls, env: Mapping[str, str], result_dir: Path) -> ReplayConfig:
         """Validate the replay inputs in ``env``; artifacts go below ``result_dir``."""
@@ -70,6 +72,18 @@ class ReplayConfig:
         loader, dataset = traces.resolve(
             values["MODEL_PREFIX"], inputs.optional("WEKA_LOADER_OVERRIDE", env)
         )
+        token_trace = inputs.optional("AGENTX_TOKEN_TRACE", env)
+        mode = inputs.optional("AGENTX_REPLAY_MODE", env)
+        if token_trace or mode:
+            if not token_trace or mode not in {"generated", "recorded"}:
+                raise inputs.InputError("AGENTX_TOKEN_TRACE and AGENTX_REPLAY_MODE=generated|recorded are required together")
+            inputs.require("AGENTX_HARNESS_WHEEL", "AGENTX_HARNESS_SHA256", env=env)
+            if "sglang" not in values["FRAMEWORK"]:
+                raise inputs.InputError("token experiments require the patched SGLang backend")
+            if not Path(token_trace).exists():
+                raise inputs.InputError(f"AGENTX_TOKEN_TRACE does not exist: {token_trace}")
+            if env.get("AIPERF_APPLY_CHAT_TEMPLATE") == "true":
+                raise inputs.InputError("recorded prompt IDs already include the chat template")
         extra_inputs = inputs.optional("AIPERF_EXTRA_INPUTS", env) or ""
         return cls(
             url=server_url(env),
@@ -98,6 +112,7 @@ class ReplayConfig:
             dataset=dataset,
             apply_chat_template=env.get("AIPERF_APPLY_CHAT_TEMPLATE") == "true",
             benchmark_grace_period=inputs.optional("AIPERF_BENCHMARK_GRACE_PERIOD", env),
+            token_trace=Path(token_trace).absolute() if token_trace else None,
         )
 
 
