@@ -267,7 +267,7 @@ def prepare(
     max_examined_sessions: int = 128,
     seed: int = 42,
 ) -> dict[str, Any]:
-    import pyarrow.parquet as parquet
+    from pyarrow import parquet
 
     if output.exists():
         raise ValueError(f"output already exists: {output}")
