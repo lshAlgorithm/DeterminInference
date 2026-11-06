@@ -194,6 +194,28 @@ within one rank, never sum the two replicas. Token load imbalance is not GPU
 execution-time imbalance. The initial first-request profile covers only 1/308
 requests and cannot stand in for workload-wide rank timing.
 
+Both complete recorder arms passed durable raw audits:21 sessions/308 requests
+per content,42 files per content across both ranks, exact prefill suffix IDs and
+positions, exact full-output decode IDs and positions, identity24-by60 placement,
+and four routed expert assignments per input per layer. Replicated rank totals
+match; aggregation uses rank0 only. Prefill forwards cover155943 input tokens,
+and decode forwards cover61931 tokens in each content arm. Under overlap the
+last output token is forwarded before its result is discarded, so decode work
+here is output length, not output length minus one.
+
+| Phase | Mean layer expert-distribution TV distance, real vs synthetic | Real mean layer card max/mean | Synthetic mean layer card max/mean |
+| --- | ---: | ---: | ---: |
+| Prefill | 0.16887 | 1.03146 | 1.03593 |
+| Decode | 0.17926 | 1.04047 | 1.03643 |
+
+These are routed token distributions under fixed placement, not GPU time.
+The three-pair recorder-off throughput interval still spans zero despite the
+expert-distribution differences. One recorder-on pass took21.41% longer request
+service time for real content and21.30% for synthetic content versus the earlier
+three-off mean. These descriptive estimates lack paired drift control;
+three additional alternating on/off pairs are running. The followup reports
+service time separately from workload wall time including recorder dumps.
+
 ## Review and remaining completion gates
 
 Fresh Codex reviews found and prompted fixes for target-template argument
