@@ -103,3 +103,32 @@ def run_point(spec: dict, point: dict, output: Path) -> dict:
         stop_process(server)
         (directory / 'receipt.json').write_text(json.dumps(receipt, indent=2))
     return receipt
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--spec', type=Path, required=True)
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    spec = json.loads(args.spec.read_text())
+    args.output.mkdir(parents=True, exist_ok=False)
+    (args.output / 'spec.json').write_text(json.dumps(spec, indent=2))
+    state = {'status': 'running', 'pid': os.getpid(), 'completed': []}
+    try:
+        for point in spec['points']:
+            state['current'] = point['name']
+            (args.output / 'status.json').write_text(json.dumps(state, indent=2))
+            result = run_point(spec, point, args.output)
+            state['completed'].append({'name': point['name'], 'status': result['status']})
+            print(json.dumps(state), flush=True)
+            time.sleep(5)
+        state['status'] = 'complete'
+    except BaseException as error:
+        state.update(status='failed', error=repr(error))
+        raise
+    finally:
+        (args.output / 'status.json').write_text(json.dumps(state, indent=2))
+
+
+if __name__ == '__main__':
+    main()
