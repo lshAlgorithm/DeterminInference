@@ -47,8 +47,7 @@
       "warning",
       "--log-level-http",
       "warning"
-    ],
-    "gpu_guard": "0, 4\n1, 23801\n2, 1\n3, 1\n"
+    ]
   },
   "client": {
     "cmd": [
@@ -426,5 +425,13 @@
     "roomy_evicted_tokens_including_warmup": 138234,
     "pressure_evicted_tokens_including_warmup": 1202333,
     "note": "roomy means active request working sets fit; recycled independent sessions still cause stale-cache eviction"
+  },
+  "code": {
+    "inferencex_entry_commit": "4ac6a90",
+    "campaign_runner_commit": "59ba1fd",
+    "sglang_commit": "fe814a0",
+    "harness_commit": "b9772d2",
+    "serving_overlay": "evidence/serving-source-20261106.tar.gz",
+    "seed": 42
   }
 }

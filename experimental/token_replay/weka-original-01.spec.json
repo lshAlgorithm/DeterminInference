@@ -47,8 +47,7 @@
       "warning",
       "--log-level-http",
       "warning"
-    ],
-    "gpu_guard": "0, 4\n1, 23801\n2, 1\n3, 1\n"
+    ]
   },
   "client": {
     "cmd": [
@@ -120,5 +119,13 @@
     "revision": "23f152f6f0f9399a85901b89a6458def0ef16729",
     "path": "/home/tegao/infra-token-replay/hf-weka/hub/datasets--semianalysisai--cc-traces-weka-062126/snapshots/23f152f6f0f9399a85901b89a6458def0ef16729",
     "scope": "public hash-only Weka corpus, not recovered token content"
+  },
+  "code": {
+    "inferencex_entry_commit": "4ac6a90",
+    "campaign_runner_commit": "59ba1fd",
+    "sglang_commit": "fe814a0",
+    "harness_commit": "b9772d2",
+    "serving_overlay": "evidence/serving-source-20261106.tar.gz",
+    "seed": 42
   }
 }
