@@ -177,7 +177,13 @@ def replay_argv(cfg: ReplayConfig, cli: str | Path) -> list[str]:
     argv += ["--output-artifact-dir", str(cfg.artifact_dir)]
     if cfg.unsafe_override:
         argv.append("--unsafe-override")
-    argv += ["--public-dataset", cfg.loader]
+    if cfg.token_trace is None:
+        argv += ["--public-dataset", cfg.loader]
+    else:
+        argv += ["--input-file", str(cfg.token_trace), "--custom-dataset-type", "weka_trace"]
+        argv += ["--endpoint-type", "completions", "--random-seed", "42"]
+        if "--unsafe-override" not in argv:
+            argv.append("--unsafe-override")
     if cfg.apply_chat_template:
         argv.append("--apply-chat-template")
     if cfg.benchmark_grace_period is not None:
