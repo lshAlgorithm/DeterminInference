@@ -42,7 +42,9 @@ def check_live_lifecycle(url: str, traces: Path) -> dict:
         try:
             result = generate([500] * prompt_size, out_size, 'lifecycle-budget', [7]*out_size)
         except urllib.error.HTTPError as error:
-            rejected.append({'status': error.code, 'body': error.read().decode()})
+            body = error.read().decode()
+            assert error.code == 400 and 'token replay' in body and ('budget' in body or 'truncation' in body), (error.code, body)
+            rejected.append({'status': error.code, 'body': body})
         else:
             assert result['meta_info']['finish_reason']['type'] == 'abort', result
             rejected.append(result['meta_info']['finish_reason'])
