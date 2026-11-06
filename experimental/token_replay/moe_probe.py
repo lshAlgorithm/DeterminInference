@@ -154,6 +154,41 @@ def check_engine(model: Path, output: Path, record: bool, ep_size: int) -> dict:
         engine.shutdown()
 
 
+def summarize_recorder(directory: Path, ep_size: int) -> dict:
+    import torch
+    from sglang.srt.model_executor.forward_batch_info import ForwardMode
+
+    summaries = []
+    for path in sorted(directory.glob("expert_distribution_recorder_*.pt")):
+        payload = torch.load(path, map_location="cpu", weights_only=False)
+        counts = {}
+        for record in payload["records"]:
+            mode = ForwardMode(record["forward_mode"])
+            phase = "decode" if mode.is_decode() else "prefill" if mode.is_prefill() else mode.name
+            histogram = record["global_physical_count"].to(torch.float64)
+            counts[phase] = counts.get(phase, torch.zeros_like(histogram)) + histogram
+        phases = {}
+        for phase, histogram in counts.items():
+            expert_mean = histogram.mean(dim=1)
+            per_card = histogram.reshape(histogram.shape[0], ep_size, -1).sum(dim=2)
+            card_mean = per_card.mean(dim=1)
+            phases[phase] = {
+                "per_layer_physical_expert_counts": histogram.to(torch.int64).tolist(),
+                "per_layer_expert_max_over_mean": (histogram.max(dim=1).values / expert_mean.clamp_min(1)).tolist(),
+                "per_layer_expert_cv": (histogram.std(dim=1, correction=0) / expert_mean.clamp_min(1)).tolist(),
+                "per_layer_trivial_placement_card_token_load": per_card.to(torch.int64).tolist(),
+                "per_layer_card_max_over_mean": (per_card.max(dim=1).values / card_mean.clamp_min(1)).tolist(),
+                "per_layer_card_cv": (per_card.std(dim=1, correction=0) / card_mean.clamp_min(1)).tolist(),
+            }
+        summaries.append({"file": path.name, "phases": phases})
+    if not summaries:
+        raise AssertionError("expert recorder produced no files")
+    return {
+        "rank_records": summaries,
+        "scope": "routed expert token counts under trivial fixed placement; replicated rank routing histograms are not summed; counts are not GPU time",
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=Path, required=True)
