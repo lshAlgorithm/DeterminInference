@@ -236,6 +236,9 @@ def main() -> None:
             ]
         }
         report["gpu_guard"] = guard_gpus()
+        os.environ["SGLANG_EXPERT_DISTRIBUTION_RECORDER_DIR"] = str(
+            args.output.resolve()
+        )
         os.chdir(args.output)
         report["result"] = check_engine(
             args.model, args.output, args.record, args.ep_size
