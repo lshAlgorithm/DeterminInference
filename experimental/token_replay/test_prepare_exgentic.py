@@ -1,5 +1,8 @@
 import json
+import hashlib
+import tempfile
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -40,6 +43,32 @@ def make_tokenizer():
 
 
 class TestPreparation(unittest.TestCase):
+    def test_frozen_export_is_reproducible_and_rejects_source_changes(self):
+        import pyarrow
+        from pyarrow import parquet
+
+        spans = [make_span() for _ in range(4)]
+        for index, span in enumerate(spans):
+            span["start_time"] = f"2026-01-01T00:00:{index * 2:02d}+00:00"
+            span["end_time"] = f"2026-01-01T00:00:{index * 2 + 1:02d}+00:00"
+        rows = [{"session_id": str(index), "benchmark": "swebench", "spans": spans} for index in range(3)]
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            source = root / "0000.parquet"
+            parquet.write_table(pyarrow.Table.from_pylist(rows), source, row_group_size=1)
+            digest = hashlib.sha256(source.read_bytes()).hexdigest()
+            with patch.object(prepare, "SOURCE_HASHES", [digest]):
+                first = prepare.prepare(root, root / "first", make_tokenizer(), "target", max_sessions=2)
+                second = prepare.prepare(root, root / "second", make_tokenizer(), "target", max_sessions=2)
+                self.assertEqual(first, second)
+                self.assertEqual(first["selected_requests"], 8)
+                self.assertEqual(first["unexamined_candidate_sessions"], 1)
+                for entry in first["selected"]:
+                    self.assertEqual((root / "first" / entry["file"]).read_bytes(), (root / "second" / entry["file"]).read_bytes())
+                source.write_bytes(b"changed")
+                with self.assertRaisesRegex(ValueError, "pinned source hash mismatch"):
+                    prepare.source_candidates(root)
+
     def test_invalid_call_breaks_continuous_window(self):
         requests = [{"start": index * 2, "end": index * 2 + 1} for index in range(7)]
         requests[3] = ValueError("rejected_call")
