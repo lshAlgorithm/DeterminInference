@@ -21,6 +21,8 @@ def aggregate_routing(routing: dict, sessions: int, ep_size: int = 2) -> dict:
             raise ValueError(f'rank {rank}: expected {sessions} session dumps, got {len(records)}')
         phases = {}
         for record in sorted(records, key=lambda r: float(Path(r['file']).stem.split('_')[-2])):
+            if set(record['phases']) != {'prefill', 'decode'}:
+                raise ValueError('session lacks expected prefill/decode routing phases')
             for phase, data in record['phases'].items():
                 hist = data['per_layer_physical_expert_counts']
                 if not hist or not hist[0] or len(hist[0]) % ep_size:
@@ -50,6 +52,8 @@ def aggregate_routing(routing: dict, sessions: int, ep_size: int = 2) -> dict:
                            'card_token_load': loads, 'card_max_over_mean': max(loads)/card_mean if card_mean else None,
                            'card_cv': statistics.pstdev(loads)/card_mean if card_mean else None})
         result[phase] = layers
+    if set(result) != {'prefill', 'decode'}:
+        raise ValueError('incomplete routing phases')
     return {'sessions': sessions, 'replicas_equal': True, 'selected_rank': 0, 'phases': result,
             'scope': 'session sums from one verified global replica, fixed contiguous expert placement; routed token counts are not GPU execution time'}
 
