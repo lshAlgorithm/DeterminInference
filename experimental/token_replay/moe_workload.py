@@ -11,6 +11,7 @@ from moe_probe import guard_gpus, summarize_recorder
 
 def run_workload(engine, source: Path, output: Path, record: bool, profile: bool, profile_targets: dict | None = None) -> dict:
     output.mkdir(parents=True, exist_ok=False)
+    workload_started = time.perf_counter()
     rows = []
     targets = profile_targets if profile_targets is not None else {'000.json': [0]}
     for path in sorted(source.glob('*.json')):
@@ -49,6 +50,7 @@ def run_workload(engine, source: Path, output: Path, record: bool, profile: bool
             engine.dump_expert_distribution_record()
         print(json.dumps({'directory': str(output), 'session': path.name, 'completed_requests': len(rows)}), flush=True)
     summary = {'source': str(source), 'requests': len(rows), 'output_tokens': sum(r['output_tokens'] for r in rows), 'prompt_tokens': sum(r['prompt_tokens'] for r in rows), 'cached_tokens': sum(r['cached_tokens'] for r in rows), 'request_wall_seconds': sum(r['wall_seconds'] for r in rows), 'record': record, 'profile': profile, 'profiled_requests': sum(r['profiled'] for r in rows), 'profile_targets': targets if profile else None, 'scope': 'fixed ordered zero-wait sequential service measurement; source think times omitted; cache flushed between sessions; no original arrival-time or DAG claims'}
+    summary['workload_wall_seconds_including_flush_dump'] = time.perf_counter()-workload_started
     (output/'summary.json').write_text(json.dumps(summary,indent=2))
     return summary
 
