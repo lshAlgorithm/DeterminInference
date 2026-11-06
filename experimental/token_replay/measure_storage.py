@@ -65,6 +65,7 @@ def measure_storage(source: Path, output: Path) -> dict:
             released_bytes = torch.cuda.memory_allocated()-baseline
             assert released_bytes == 0, released_bytes
             record = {'concurrency': concurrency, 'sources': [[name, index] for name, index, _ in group],
+                      'baseline_allocated_bytes': baseline, 'baseline_reserved_bytes': reserved_baseline,
                       'token_payload_bytes': 8*sum(len(row['output_ids']) for _, _, row in group),
                       'metadata_payload_bytes': 24*concurrency,
                       'active_payload_after_filter_bytes': 8*sum(len(group[i][2]['output_ids']) for i in keep)+24*len(keep),
@@ -76,7 +77,7 @@ def measure_storage(source: Path, output: Path) -> dict:
             del indices
     result = {'complete': True, 'seed': 42, 'gpu_guard': guard, 'gpu': torch.cuda.get_device_name(),
               'source': str(source), 'cuda_first_allocation_seconds': initialization, 'records': records,
-              'scope': 'standalone replay-storage component on32 fixed qualified responses; preallocated filter indices excluded; real CUDA allocator allocation/peak deltas, not whole-serving incremental VRAM; filter retains shared packed storage; merge adds an ordinary half; release checked after synchronize; reserved pool retention is distinct from live allocation; timings are component diagnostics, not the3% end-to-end decision'}
+              'scope': 'standalone replay-storage component on32 fixed qualified responses; preallocated filter indices excluded; real CUDA allocator allocation/peak deltas, not whole-serving incremental VRAM; filter retains shared packed storage; merge adds a same-concurrency ordinary batch; release checked after synchronize; reserved pool retention is distinct from live allocation; timings are component diagnostics, not the3% end-to-end decision'}
     (output/'storage.json').write_text(json.dumps(result, indent=2))
     return result
 
