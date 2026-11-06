@@ -59,7 +59,11 @@ def model_manifest(model: Path) -> dict:
             while chunk := stream.read(8 << 20):
                 digest.update(chunk)
         files.append(
-            {"name": name, "size_bytes": path.stat().st_size, "sha256": digest.hexdigest()}
+            {
+                "name": name,
+                "size_bytes": path.stat().st_size,
+                "sha256": digest.hexdigest(),
+            }
         )
     return {
         "model": "Qwen/Qwen1.5-MoE-A2.7B-Chat",
@@ -112,7 +116,10 @@ def check_engine(model: Path, output: Path, record: bool, ep_size: int) -> dict:
     init_seconds = time.perf_counter() - started
     try:
         params = {
-            "temperature": 0, "max_new_tokens": 32, "ignore_eos": True, "sampling_seed": 42
+            "temperature": 0,
+            "max_new_tokens": 32,
+            "ignore_eos": True,
+            "sampling_seed": 42,
         }
         generated = engine.generate(input_ids=prompt, sampling_params=params)
         recorded = generated["output_ids"]
@@ -164,7 +171,13 @@ def summarize_recorder(directory: Path, ep_size: int) -> dict:
         counts = {}
         for record in payload["records"]:
             mode = ForwardMode(record["forward_mode"])
-            phase = "decode" if mode.is_decode() else "prefill" if mode.is_prefill() else mode.name
+            phase = (
+                "decode"
+                if mode.is_decode()
+                else "prefill"
+                if mode.is_prefill()
+                else mode.name
+            )
             histogram = record["global_physical_count"].to(torch.float64)
             counts[phase] = counts.get(phase, torch.zeros_like(histogram)) + histogram
         phases = {}
@@ -174,11 +187,21 @@ def summarize_recorder(directory: Path, ep_size: int) -> dict:
             card_mean = per_card.mean(dim=1)
             phases[phase] = {
                 "per_layer_physical_expert_counts": histogram.to(torch.int64).tolist(),
-                "per_layer_expert_max_over_mean": (histogram.max(dim=1).values / expert_mean.clamp_min(1)).tolist(),
-                "per_layer_expert_cv": (histogram.std(dim=1, correction=0) / expert_mean.clamp_min(1)).tolist(),
-                "per_layer_trivial_placement_card_token_load": per_card.to(torch.int64).tolist(),
-                "per_layer_card_max_over_mean": (per_card.max(dim=1).values / card_mean.clamp_min(1)).tolist(),
-                "per_layer_card_cv": (per_card.std(dim=1, correction=0) / card_mean.clamp_min(1)).tolist(),
+                "per_layer_expert_max_over_mean": (
+                    histogram.max(dim=1).values / expert_mean.clamp_min(1)
+                ).tolist(),
+                "per_layer_expert_cv": (
+                    histogram.std(dim=1, correction=0) / expert_mean.clamp_min(1)
+                ).tolist(),
+                "per_layer_trivial_placement_card_token_load": per_card.to(
+                    torch.int64
+                ).tolist(),
+                "per_layer_card_max_over_mean": (
+                    per_card.max(dim=1).values / card_mean.clamp_min(1)
+                ).tolist(),
+                "per_layer_card_cv": (
+                    per_card.std(dim=1, correction=0) / card_mean.clamp_min(1)
+                ).tolist(),
             }
         summaries.append({"file": path.name, "phases": phases})
     if not summaries:
