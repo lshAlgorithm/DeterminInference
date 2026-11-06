@@ -21,6 +21,9 @@ def main() -> None:
         (args.output/'status.json').write_text(json.dumps(state,indent=2))
         dependency=Path(spec['wait_for'])
         while True:
+            if not dependency.exists():
+                time.sleep(10)
+                continue
             previous=json.loads(dependency.read_text())
             if previous['status']=='failed':
                 raise RuntimeError(f'prerequisite failed: {dependency}')
