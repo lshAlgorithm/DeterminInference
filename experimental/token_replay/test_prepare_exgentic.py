@@ -17,3 +17,11 @@ def make_span(text="answer", **attributes):
             **attributes,
         },
     }
+
+
+def make_tokenizer():
+    def render(messages, tokenize, add_generation_prompt, tools=None):
+        prefix = json.dumps(tools) if tools else ""
+        body = "".join("<" + message["role"] + ">" + message["content"] + "</>" for message in messages)
+        return prefix + body + ("<assistant>" if add_generation_prompt else "")
+    return SimpleNamespace(chat_template="test", apply_chat_template=render, encode=lambda text, **kwargs: list(map(ord, text)))
