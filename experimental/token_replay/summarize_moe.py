@@ -55,12 +55,15 @@ def aggregate_routing(routing: dict, sessions: int, ep_size: int = 2) -> dict:
 
 
 def summarize_service(directory: Path, expected: dict) -> dict:
+    summary = json.loads((directory/'summary.json').read_text())
+    if summary['profile']:
+        raise ValueError('profiled arm in performance comparison')
     rows = [json.loads(line) for line in (directory/'requests.jsonl').read_text().splitlines()]
     keys = [(r['session'], r['request']) for r in rows]
     if len(set(keys)) != len(rows) or set(keys) != set(expected):
         raise ValueError(f'incomplete or duplicated request coverage: {directory}')
     for row in rows:
-        if row['profiled'] or not row['output_ids_exact']:
+        if row.get('profiled', summary['profile']) or not row['output_ids_exact']:
             raise ValueError('profiled or inexact request in performance comparison')
         if [row['prompt_tokens'], row['output_tokens']] != expected[(row['session'], row['request'])]:
             raise ValueError('request lengths disagree with frozen data')
