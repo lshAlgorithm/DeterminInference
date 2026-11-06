@@ -132,7 +132,10 @@ def make_weka(session_id: str, requests: list[dict[str, Any]], model: str) -> tu
             "model": model,
             "in": len(input_ids),
             "out": len(output_ids),
-            "hash_ids": [],
+            "hash_ids": [
+                int.from_bytes(hashlib.sha256(bytes(str(input_ids[:end]), "ascii")).digest()[:8], "big") >> 1
+                for end in range(16, len(input_ids) + 1, 16)
+            ],
             "input_ids": input_ids,
             "output_ids": output_ids,
             "api_time": request["end"] - request["start"],
@@ -150,7 +153,7 @@ def make_weka(session_id: str, requests: list[dict[str, Any]], model: str) -> tu
     return {
         "id": session_id,
         "models": [model],
-        "block_size": 1,
+        "block_size": 16,
         "hash_id_scope": "local",
         "requests": records,
     }, provenance
