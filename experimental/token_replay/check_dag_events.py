@@ -35,11 +35,13 @@ def check_dag_events(records: Path, server_log: Path) -> dict:
         child = sorted((r for r in rows if r['source_kind'] == 'weka_subagent'), key=lambda r:r['request_start_ns'])
         joined = [r for r in rows if r['source_outer_idx'] == 2]
         reset = [r for r in rows if r['source_outer_idx'] == 3]
+        from_start = any(r['source_outer_idx'] == 0 and r['benchmark_phase'] == 'profiling' for r in rows)
         for parent in joined:
-            prior = [c for c in child if c['request_start_ns'] < parent['request_start_ns']]
-            if prior:
+            if from_start and {c.get('source_inner_idx') for c in child} != {0, 1}:
+                failures.append({'kind': 'missing_expected_children', 'root': root})
+            if child:
                 counts['joins'] += 1
-                if max(c['request_end_ns'] for c in prior) > parent['request_start_ns']:
+                if max(c['request_end_ns'] for c in child) > parent['request_start_ns']:
                     failures.append({'kind': 'join_before_child_end', 'root': root})
         for previous, current in zip(child, child[1:]):
             if current['benchmark_phase'] == previous['benchmark_phase'] == 'profiling':
