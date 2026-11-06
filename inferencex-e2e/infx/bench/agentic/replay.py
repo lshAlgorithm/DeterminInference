@@ -183,7 +183,7 @@ def replay_argv(cfg: ReplayConfig, cli: str | Path) -> list[str]:
         argv += ["--public-dataset", cfg.loader]
     else:
         argv += ["--input-file", str(cfg.token_trace), "--custom-dataset-type", "weka_trace"]
-        argv += ["--endpoint-type", "completions", "--random-seed", "42"]
+        argv += ["--endpoint-type", "sglang-token-completions", "--random-seed", "42"]
         if "--unsafe-override" not in argv:
             argv.append("--unsafe-override")
     if cfg.apply_chat_template:
