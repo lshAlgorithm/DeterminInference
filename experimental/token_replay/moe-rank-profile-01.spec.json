@@ -1,0 +1,73 @@
+{
+  "seed": 42,
+  "settings": {
+    "model_path": "/home/tegao/infra-token-replay/models/Qwen1.5-MoE-A2.7B-Chat",
+    "dtype": "bfloat16",
+    "tp_size": 2,
+    "ep_size": 2,
+    "random_seed": 42,
+    "skip_tokenizer_init": true,
+    "attention_backend": "triton",
+    "moe_runner_backend": "triton",
+    "moe_a2a_backend": "none",
+    "enable_eplb": false,
+    "init_expert_location": "trivial",
+    "disable_shared_experts_fusion": true,
+    "mem_fraction_static": 0.82,
+    "context_length": 16384,
+    "max_total_tokens": 16384,
+    "max_running_requests": 8,
+    "cuda_graph_max_bs": 8,
+    "disable_piecewise_cuda_graph": true,
+    "expert_distribution_recorder_mode": null,
+    "log_level": "warning"
+  },
+  "sources": {
+    "real": "/home/tegao/infra-token-replay/exgentic-moe-02/sessions",
+    "synthetic": "/home/tegao/infra-token-replay/exgentic-moe-synthetic-01/sessions"
+  },
+  "runs": [
+    {
+      "name": "representative-real",
+      "content": "real",
+      "record": false,
+      "profile": true
+    },
+    {
+      "name": "representative-synthetic",
+      "content": "synthetic",
+      "record": false,
+      "profile": true
+    }
+  ],
+  "scope": "fixed 21-session 308-request sequential workload, paired content with same lengths and prefix structure; per-request timing excludes cache flush and initialization",
+  "profile_targets": {
+    "002.json": [
+      9,
+      14
+    ],
+    "003.json": [
+      6
+    ],
+    "005.json": [
+      0
+    ],
+    "007.json": [
+      0,
+      3,
+      8
+    ],
+    "010.json": [
+      5
+    ],
+    "013.json": [
+      6
+    ]
+  },
+  "profile_selection": {
+    "method": "request input and output length quantiles 0,25,50,75,100 percent; selected before timing",
+    "selected": 9,
+    "available": 308,
+    "scope": "all preceding session requests preserve cache history; target prefill plus first32 client-observed outputs profiled; full request still executes"
+  }
+}
