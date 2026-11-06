@@ -47,6 +47,8 @@ def encode_span(span: dict[str, Any], tokenizer: Any) -> dict[str, Any]:
     outputs = _normalize_messages(attributes.get("gen_ai.output.messages"))
     if len(outputs) != 1 or outputs[0]["role"] != "assistant":
         raise ValueError("output_is_not_one_assistant_message")
+    if not outputs[0].get("content") and not outputs[0].get("tool_calls"):
+        raise ValueError("empty_source_response")
     if any(message.get("reasoning_content") for message in messages + outputs):
         raise ValueError("reasoning_semantics_not_qualified_for_target_template")
     tools = _normalize_tools(attributes.get("gen_ai.tool.definitions"))
