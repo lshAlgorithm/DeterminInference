@@ -57,6 +57,15 @@ def main() -> int:
         )
     )
 
+    if token_trace := os.environ.get("AGENTX_TOKEN_TRACE"):
+        agg["submission_valid"] = False
+        agg["token_replay_experiment"] = {
+            "trace": token_trace,
+            "mode": os.environ["AGENTX_REPLAY_MODE"],
+            "seed": 42,
+            "scope": "local token experiment; not an official AgentX score",
+        }
+
     if (attempt := run_attempt(os.environ)) is not None:
         agg["run_attempt"] = attempt
 
