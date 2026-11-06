@@ -175,6 +175,9 @@ zero additional reserved bytes therefore does not mean zero reserved memory.
 First CUDA allocation took183.56ms; per-stage synchronized host medians were
 226–278us for staging,85–86us for filtering, and84–85us for merging. These single-
 operation synchronized timings differ from the20-call amortized fixture above.
+First-use costs were separately 0.295ms for staging,
+15.012ms for filtering and 5.787ms for merging;
+the per-configuration medians above must not substitute for these cold costs.
 This is actual component allocator evidence for the selected responses, not
 whole-serving incremental VRAM or a population maximum. It does not replace
 HTTP end-to-end overhead measurement.
