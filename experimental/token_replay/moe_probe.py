@@ -59,14 +59,14 @@ def model_manifest(model: Path) -> dict:
             while chunk := stream.read(8 << 20):
                 digest.update(chunk)
         files.append(
-            dict(name=name, size_bytes=path.stat().st_size, sha256=digest.hexdigest())
+            {"name": name, "size_bytes": path.stat().st_size, "sha256": digest.hexdigest()}
         )
-    return dict(
-        model="Qwen/Qwen1.5-MoE-A2.7B-Chat",
-        revision="ec052fda178e241c7c443468d2fa1db6618996be",
-        declared_weight_bytes=index["metadata"]["total_size"],
-        files=files,
-    )
+    return {
+        "model": "Qwen/Qwen1.5-MoE-A2.7B-Chat",
+        "revision": "ec052fda178e241c7c443468d2fa1db6618996be",
+        "declared_weight_bytes": index["metadata"]["total_size"],
+        "files": files,
+    }
 
 
 def check_engine(model: Path, output: Path, record: bool, ep_size: int) -> dict:
