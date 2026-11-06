@@ -252,3 +252,26 @@ def prepare(source_folder: Path, output: Path, tokenizer: Any, model: str, *, ma
     manifest["status"] = "qualified" if manifest["selected"] else "no_qualified_windows"
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     return manifest
+
+
+def main() -> None:
+    from transformers import AutoTokenizer
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source-folder", required=True, type=Path)
+    parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--tokenizer", required=True, type=Path)
+    parser.add_argument("--model", required=True)
+    parser.add_argument("--max-sessions", type=int, default=32)
+    parser.add_argument("--max-examined-sessions", type=int, default=128)
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args()
+    if not 1 <= args.max_sessions <= 32 or args.max_examined_sessions < args.max_sessions:
+        parser.error("require 1 <= max-sessions <= 32 and examined budget >= max-sessions")
+    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer, local_files_only=True)
+    manifest = prepare(args.source_folder, args.output, tokenizer, args.model, max_sessions=args.max_sessions, max_examined_sessions=args.max_examined_sessions, seed=args.seed)
+    print(json.dumps({key: manifest[key] for key in ("status", "selected_sessions", "selected_requests", "exclusion_counts")}, indent=2))
+
+
+if __name__ == "__main__":
+    main()
