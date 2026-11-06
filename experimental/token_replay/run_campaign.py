@@ -88,12 +88,17 @@ def run_point(spec: dict, point: dict, output: Path) -> dict:
             (directory / 'metrics-after.txt').write_bytes(response.read())
         if client.returncode:
             raise RuntimeError(f'benchmark exited {client.returncode}')
-        records = [json.loads(line) for line in (directory/'aiperf_artifacts/profile_export.jsonl').open()]
-        errors = [row for row in records if row.get('error') or row['metadata'].get('context_overflow_skip') or row['metadata'].get('was_cancelled')]
-        receipt['records'] = len(records)
-        receipt['errors'] = len(errors)
-        if errors:
-            raise RuntimeError(f'{len(errors)} request errors/skips/cancellations; inspect raw records')
+        if spec.get('native_result'):
+            native = json.loads((directory / spec['native_result']).read_text())
+            if not native['complete']:
+                raise RuntimeError('native measurement did not complete')
+        else:
+            records = [json.loads(line) for line in (directory/'aiperf_artifacts/profile_export.jsonl').open()]
+            errors = [row for row in records if row.get('error') or row['metadata'].get('context_overflow_skip') or row['metadata'].get('was_cancelled')]
+            receipt['records'] = len(records)
+            receipt['errors'] = len(errors)
+            if errors:
+                raise RuntimeError(f'{len(errors)} request errors/skips/cancellations; inspect raw records')
         receipt['status'] = 'complete'
     except BaseException as error:
         receipt.update(status='failed', error=repr(error))
