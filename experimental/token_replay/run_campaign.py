@@ -22,3 +22,13 @@ def gpu_guard(indices: list[int]) -> str:
     if found != set(indices):
         raise RuntimeError(f'missing GPUs: {indices}, found {found}')
     return result
+
+
+def stop_process(process: subprocess.Popen | None) -> None:
+    if process is not None and process.poll() is None:
+        os.killpg(process.pid, signal.SIGTERM)
+        try:
+            process.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            process.wait()
