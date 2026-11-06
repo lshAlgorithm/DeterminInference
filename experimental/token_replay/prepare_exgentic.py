@@ -213,7 +213,9 @@ def make_weka(
     }, provenance
 
 
-def source_candidates(folder: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def source_candidates(
+    folder: Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     import pyarrow.parquet as parquet
 
     sources = []
@@ -225,20 +227,31 @@ def source_candidates(folder: Path) -> tuple[list[dict[str, Any]], list[dict[str
         if digest != expected:
             raise ValueError(f"pinned source hash mismatch: {path}")
         source = parquet.ParquetFile(path)
-        sources.append({"file": path.name, "sha256": digest, "bytes": path.stat().st_size, "rows": source.metadata.num_rows})
+        sources.append(
+            {
+                "file": path.name,
+                "sha256": digest,
+                "bytes": path.stat().st_size,
+                "rows": source.metadata.num_rows,
+            }
+        )
         shard_row = 0
         for group_index in range(source.num_row_groups):
-            metadata = source.read_row_group(group_index, columns=["benchmark", "session_id"]).to_pylist()
+            metadata = source.read_row_group(
+                group_index, columns=["benchmark", "session_id"]
+            ).to_pylist()
             for group_row, row in enumerate(metadata):
                 if row["benchmark"] == "swebench":
-                    candidates.append({
-                        "shard": path.name,
-                        "row_group": group_index,
-                        "group_row": group_row,
-                        "shard_row": shard_row,
-                        "global_row": global_row,
-                        "session_id": row["session_id"],
-                    })
+                    candidates.append(
+                        {
+                            "shard": path.name,
+                            "row_group": group_index,
+                            "group_row": group_row,
+                            "shard_row": shard_row,
+                            "global_row": global_row,
+                            "session_id": row["session_id"],
+                        }
+                    )
                 shard_row += 1
                 global_row += 1
     return candidates, sources
