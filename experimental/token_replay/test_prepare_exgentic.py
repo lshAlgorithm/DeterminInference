@@ -64,7 +64,19 @@ class TestPreparation(unittest.TestCase):
         self.assertEqual(receipt["selected_span_indexes"], [0, 1, 2, 3])
 
     def test_tool_calls_not_preserved_by_template_are_rejected(self):
-        output = [{"role": "assistant", "parts": [{"type": "tool_call", "name": "run", "id": "c1", "arguments": {"command": "ls"}}]}]
+        output = [
+            {
+                "role": "assistant",
+                "parts": [
+                    {
+                        "type": "tool_call",
+                        "name": "run",
+                        "id": "c1",
+                        "arguments": {"command": "ls"},
+                    }
+                ],
+            }
+        ]
         span = make_span(**{"gen_ai.output.messages": json.dumps(output)})
         with self.assertRaisesRegex(ValueError, "target_template_drops_tool_calls"):
             prepare.encode_span(span, make_tokenizer())
