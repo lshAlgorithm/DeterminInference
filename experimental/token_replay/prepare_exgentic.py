@@ -31,6 +31,15 @@ def common_prefix(left: list[int], right: list[int]) -> int:
     return min(len(left), len(right))
 
 
+def prefix_hashes(input_ids: list[int], block_size: int = 16) -> list[int]:
+    digest = hashlib.sha256()
+    hashes = []
+    for start in range(0, len(input_ids) - block_size + 1, block_size):
+        digest.update(json.dumps(input_ids[start : start + block_size], separators=(",", ":")).encode())
+        hashes.append(int.from_bytes(digest.digest()[:8], "big") >> 1)
+    return hashes
+
+
 def encode_span(span: dict[str, Any], tokenizer: Any) -> dict[str, Any]:
     from aiperf.dataset.loader.exgentic import (
         _normalize_messages,
