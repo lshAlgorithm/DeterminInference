@@ -23,8 +23,10 @@ at concurrency1/4/8. The full308-request MoE recorder-off comparison found a
 synthetic-relative-to-real throughput difference of+0.2336% (95% interval
 [-0.0285%, +0.4958%]); it does not establish a throughput effect.
 
-The fixed real-content AgentX performance matrix and full MoE diagnostics are not yet
-complete. The acceptance fixture is synthetic and is not an original Weka score;
+The fixed real-content AgentX performance matrix is not yet complete.
+MoE routing coverage, nine-request dual-rank diagnostics and three paired recorder
+controls completed; recorder service overhead is about21%, so content-performance
+claims use recorder-off measurements. The acceptance fixture is synthetic and is not an original Weka score;
 Exgentic content is re-tokenized for the target model, with processed timing and
 no invented DAG. The available review is Codex-only: Claude-review was unavailable.
 No completed cross-family review or workload-wide performance improvement is claimed.
@@ -61,7 +63,8 @@ review was available for this delivery.
 forward 前替换记录 ID。本地扩展实验明确标记为非官方提交结果。
 
 原 InferenceX 入口已完成 240 个请求的精确 ID 与事件验收，零请求错误。
-完整 Dense 性能矩阵和 MoE 诊断尚未完成，短跑不代表会议目标全部解决；
+MoE 完整路由覆盖、代表请求双卡诊断与三对 recorder 控制已完成。
+完整 Dense 性能矩阵仍在运行，当前结果不代表会议目标全部解决；
 Claude 审阅缺失，也不声称双审通过。
 
 </details>

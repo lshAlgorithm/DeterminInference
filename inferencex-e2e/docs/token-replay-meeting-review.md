@@ -198,7 +198,7 @@ Those are sampled counts, not instantaneous peaks or replay-specific VRAM costs.
 The BF16 Qwen1.5-MoE-A2.7B-Chat weights are fixed at revision
 `ec052fda178e241c7c443468d2fa1db6618996be`. GPU2/3 use TP2/EP2, trivial fixed expert
 placement, EPLB disabled, and separate shared experts. The isolated environment
-and a fresh agent following the documented invocation passed the run6 witness.
+and fresh agents following the documented invocations passed the run6 and run7 witnesses.
 That witness proves feasibility and exact 32-token replay, not workload effects.
 
 The full service comparison runs all 308 qualified requests in both real and
@@ -242,8 +242,21 @@ The three-pair recorder-off throughput interval still spans zero despite the
 expert-distribution differences. One recorder-on pass took21.41% longer request
 service time for real content and21.30% for synthetic content versus the earlier
 three-off mean. These descriptive estimates lack paired drift control;
-three additional alternating on/off pairs are running. The followup reports
-service time separately from workload wall time including recorder dumps.
+three additional alternating on/off pairs completed with exact output and
+per-request cached-work matches. Their paired95% t estimates are:
+
+| Content | Recorder-on service time increase | Including flush/dump/request writes |
+| --- | ---: | ---: |
+| Real | 21.1618% [20.5655%, 21.7581%] | 22.5801% [22.2573%, 22.9029%] |
+| Synthetic | 21.2044% [20.9994%, 21.4095%] | 22.6846% [22.5092%, 22.8601%] |
+
+Service throughput correspondingly falls17.4655% for real content and17.4947%
+for synthetic content. Engine construction takes22.490–24.061 seconds in these
+six runs, recorded separately from workload time. Two fixed source requests are
+prewarmed per engine before the measured arms. Alternating order reduces order
+bias but does not eliminate temporal drift; intervals describe repeats of the
+fixed308-request workload. Recorder-on timings are excluded from content
+performance comparisons.
 
 All9 representative full requests per content completed with their preceding
 session history. All36 expected rank trace files were parsed and paired. The
@@ -276,6 +289,6 @@ cross-family review or dual-review acceptance is claimed.
 
 The original-path implementation/short acceptance and capacity qualification are
 complete. The full Dense matrix,
-MoE paired recorder/control perturbation, final
-result interpretation, and final PR validation remain completion gates. Running
+the all-corpus Dense correctness reference, final result interpretation, and
+final PR validation remain completion gates. Running
 jobs and partial tables do not satisfy those gates.
