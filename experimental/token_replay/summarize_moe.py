@@ -52,3 +52,28 @@ def aggregate_routing(routing: dict, sessions: int, ep_size: int = 2) -> dict:
         result[phase] = layers
     return {'sessions': sessions, 'replicas_equal': True, 'selected_rank': 0, 'phases': result,
             'scope': 'session sums from one verified global replica, fixed contiguous expert placement; routed token counts are not GPU execution time'}
+
+
+def summarize_service(directory: Path, expected: dict) -> dict:
+    rows = [json.loads(line) for line in (directory/'requests.jsonl').read_text().splitlines()]
+    keys = [(r['session'], r['request']) for r in rows]
+    if len(set(keys)) != len(rows) or set(keys) != set(expected):
+        raise ValueError(f'incomplete or duplicated request coverage: {directory}')
+    for row in rows:
+        if row['profiled'] or not row['output_ids_exact']:
+            raise ValueError('profiled or inexact request in performance comparison')
+        if [row['prompt_tokens'], row['output_tokens']] != expected[(row['session'], row['request'])]:
+            raise ValueError('request lengths disagree with frozen data')
+        if not 0 <= row['cached_tokens'] <= row['prompt_tokens'] or row['wall_seconds'] <= 0:
+            raise ValueError('invalid cache count or timing')
+    work = {f'{r["session"]}:{r["request"]}': [r['prompt_tokens'], r['output_tokens'], r['cached_tokens']] for r in rows}
+    seconds = sum(r['wall_seconds'] for r in rows)
+    tokens = sum(r['output_tokens'] for r in rows)
+    decode_tokens = sum(max(r['output_tokens']-1, 0) for r in rows)
+    return {'requests': len(rows), 'output_tokens': tokens, 'prompt_tokens': sum(r['prompt_tokens'] for r in rows),
+            'cached_tokens': sum(r['cached_tokens'] for r in rows), 'service_seconds': seconds,
+            'service_output_tps': tokens/seconds, 'per_gpu_service_output_tps': tokens/seconds/2,
+            'mean_ttft_seconds': statistics.mean(r['ttft_seconds'] for r in rows),
+            'mean_request_seconds': seconds/len(rows),
+            'token_weighted_tpot_seconds': sum(r['decode_seconds'] for r in rows)/decode_tokens,
+            'work_by_request': work}
