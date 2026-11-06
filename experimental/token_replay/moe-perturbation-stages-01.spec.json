@@ -1,0 +1,125 @@
+{
+  "wait_for": "/home/tegao/infra-token-replay/moe-analysis-stages-01/status.json",
+  "stages": [
+    {
+      "name": "moe-perturbation-r0-off-01",
+      "cmd": [
+        "/home/tegao/infra-token-replay/.venv/bin/python",
+        "/home/tegao/infra-token-replay/moe_workload.py",
+        "--spec",
+        "/home/tegao/infra-token-replay/moe-perturbation-r0-off-01.spec.json",
+        "--output",
+        "/home/tegao/infra-token-replay/moe-perturbation-r0-off-01"
+      ],
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "2,3",
+        "CUDA_HOME": "/home/tegao/infra-token-replay/cuda-toolkit",
+        "PATH": "/home/tegao/infra-token-replay/.venv/bin:/home/tegao/infra-token-replay/cuda-toolkit/bin:/home/tegao/miniconda3/envs/verl_qwen35_sglang/bin:/usr/local/bin:/usr/bin:/bin",
+        "OMP_NUM_THREADS": "8",
+        "MKL_NUM_THREADS": "8",
+        "OPENBLAS_NUM_THREADS": "8",
+        "PYTHONPATH": "/home/tegao/infra-token-replay/python"
+      }
+    },
+    {
+      "name": "moe-perturbation-r0-on-01",
+      "cmd": [
+        "/home/tegao/infra-token-replay/.venv/bin/python",
+        "/home/tegao/infra-token-replay/moe_workload.py",
+        "--spec",
+        "/home/tegao/infra-token-replay/moe-perturbation-r0-on-01.spec.json",
+        "--output",
+        "/home/tegao/infra-token-replay/moe-perturbation-r0-on-01"
+      ],
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "2,3",
+        "CUDA_HOME": "/home/tegao/infra-token-replay/cuda-toolkit",
+        "PATH": "/home/tegao/infra-token-replay/.venv/bin:/home/tegao/infra-token-replay/cuda-toolkit/bin:/home/tegao/miniconda3/envs/verl_qwen35_sglang/bin:/usr/local/bin:/usr/bin:/bin",
+        "OMP_NUM_THREADS": "8",
+        "MKL_NUM_THREADS": "8",
+        "OPENBLAS_NUM_THREADS": "8",
+        "PYTHONPATH": "/home/tegao/infra-token-replay/python"
+      }
+    },
+    {
+      "name": "moe-perturbation-r1-on-01",
+      "cmd": [
+        "/home/tegao/infra-token-replay/.venv/bin/python",
+        "/home/tegao/infra-token-replay/moe_workload.py",
+        "--spec",
+        "/home/tegao/infra-token-replay/moe-perturbation-r1-on-01.spec.json",
+        "--output",
+        "/home/tegao/infra-token-replay/moe-perturbation-r1-on-01"
+      ],
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "2,3",
+        "CUDA_HOME": "/home/tegao/infra-token-replay/cuda-toolkit",
+        "PATH": "/home/tegao/infra-token-replay/.venv/bin:/home/tegao/infra-token-replay/cuda-toolkit/bin:/home/tegao/miniconda3/envs/verl_qwen35_sglang/bin:/usr/local/bin:/usr/bin:/bin",
+        "OMP_NUM_THREADS": "8",
+        "MKL_NUM_THREADS": "8",
+        "OPENBLAS_NUM_THREADS": "8",
+        "PYTHONPATH": "/home/tegao/infra-token-replay/python"
+      }
+    },
+    {
+      "name": "moe-perturbation-r1-off-01",
+      "cmd": [
+        "/home/tegao/infra-token-replay/.venv/bin/python",
+        "/home/tegao/infra-token-replay/moe_workload.py",
+        "--spec",
+        "/home/tegao/infra-token-replay/moe-perturbation-r1-off-01.spec.json",
+        "--output",
+        "/home/tegao/infra-token-replay/moe-perturbation-r1-off-01"
+      ],
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "2,3",
+        "CUDA_HOME": "/home/tegao/infra-token-replay/cuda-toolkit",
+        "PATH": "/home/tegao/infra-token-replay/.venv/bin:/home/tegao/infra-token-replay/cuda-toolkit/bin:/home/tegao/miniconda3/envs/verl_qwen35_sglang/bin:/usr/local/bin:/usr/bin:/bin",
+        "OMP_NUM_THREADS": "8",
+        "MKL_NUM_THREADS": "8",
+        "OPENBLAS_NUM_THREADS": "8",
+        "PYTHONPATH": "/home/tegao/infra-token-replay/python"
+      }
+    },
+    {
+      "name": "moe-perturbation-r2-off-01",
+      "cmd": [
+        "/home/tegao/infra-token-replay/.venv/bin/python",
+        "/home/tegao/infra-token-replay/moe_workload.py",
+        "--spec",
+        "/home/tegao/infra-token-replay/moe-perturbation-r2-off-01.spec.json",
+        "--output",
+        "/home/tegao/infra-token-replay/moe-perturbation-r2-off-01"
+      ],
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "2,3",
+        "CUDA_HOME": "/home/tegao/infra-token-replay/cuda-toolkit",
+        "PATH": "/home/tegao/infra-token-replay/.venv/bin:/home/tegao/infra-token-replay/cuda-toolkit/bin:/home/tegao/miniconda3/envs/verl_qwen35_sglang/bin:/usr/local/bin:/usr/bin:/bin",
+        "OMP_NUM_THREADS": "8",
+        "MKL_NUM_THREADS": "8",
+        "OPENBLAS_NUM_THREADS": "8",
+        "PYTHONPATH": "/home/tegao/infra-token-replay/python"
+      }
+    },
+    {
+      "name": "moe-perturbation-r2-on-01",
+      "cmd": [
+        "/home/tegao/infra-token-replay/.venv/bin/python",
+        "/home/tegao/infra-token-replay/moe_workload.py",
+        "--spec",
+        "/home/tegao/infra-token-replay/moe-perturbation-r2-on-01.spec.json",
+        "--output",
+        "/home/tegao/infra-token-replay/moe-perturbation-r2-on-01"
+      ],
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "2,3",
+        "CUDA_HOME": "/home/tegao/infra-token-replay/cuda-toolkit",
+        "PATH": "/home/tegao/infra-token-replay/.venv/bin:/home/tegao/infra-token-replay/cuda-toolkit/bin:/home/tegao/miniconda3/envs/verl_qwen35_sglang/bin:/usr/local/bin:/usr/bin:/bin",
+        "OMP_NUM_THREADS": "8",
+        "MKL_NUM_THREADS": "8",
+        "OPENBLAS_NUM_THREADS": "8",
+        "PYTHONPATH": "/home/tegao/infra-token-replay/python"
+      }
+    }
+  ]
+}
