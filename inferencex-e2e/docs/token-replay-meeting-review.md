@@ -1,108 +1,167 @@
-# Alignment with the November 5 meeting
+# Token replay meeting implementation and evidence
 
-The work implements the central token-replacement mechanism and validates
-it on a real SGLang server. It does **not** yet complete the meeting's
-benchmark-methodology objective. The current deliverable is a working,
-optimized prototype plus an experimental harness route; it is not a
-validated repair of the original InferenceX AgentX scenario.
+The original `agentx profile` route now accepts complete recorded token IDs,
+retains the AgentX scheduler, snapshot warmup, spawn/join and session isolation,
+and runs through the InferenceX result collector. The full performance study is
+still running. Neither the 3% overhead target nor an improvement in benchmark
+accuracy is established by the acceptance runs below.
 
-## Motivation and acceptance
+## Implementation
 
-The meeting's objective is to compare inference systems under the same
-recorded agent trajectory, so generated-token drift does not change the
-prefixes, KV reuse, recomputation, or work being measured. Token-level
-replacement is the intervention. Reliable KV behavior and low additional
-measurement overhead are the outcomes to establish. Real content is also
-needed before interpreting MoE expert routing as representative.
+`AGENTX_TOKEN_TRACE` selects local Weka-shaped token traces and
+`AGENTX_REPLAY_MODE=generated|recorded` selects the behavior. Both modes use the
+same prompt IDs, output lengths, scheduler and cache configuration. The patched
+harness wheel is pinned and verified during bootstrap; the original public-data
+route remains the default. Local token aggregates explicitly contain
+`submission_valid=false` and the mode, source and seed.
 
-The available meeting document is an AI-generated summary, including a
-proposal to precompute response embeddings and a claim about an extra
-KV-warmup thread. Those details require checking against the actual
-serving path and benchmark implementation.
+The harness carries paired `input_ids`/`output_ids` through Weka request parsing,
+turn construction, snapshots and request dispatch. Full prompt IDs bypass chat
+rendering. One-token warmup truncates the replay output to one token too. The
+`sglang-token-completions` endpoint supports the existing per-session cache-bust
+contract without modifying token IDs: tree members share a `cache_salt`, while
+independent tree instances receive different salts. The SGLang scheduler now
+forwards that value into `Req.extra_key`; merely sending a salt on the wire was
+insufficient before that fix.
 
-| Meeting requirement | Current evidence | Assessment |
+SGLang 0.5.10 still executes normal forward and sampling. Its replacement kernel
+writes the recorded ID before the next forward and logprob reporting. Replay
+storage is packed on device, with metadata-only batch filtering/merging and no
+replay state once the last forced request exits. Model embedding lookup remains
+normal. Full-trace requests that exceed tokenizer or scheduler admission budgets
+are rejected, including the one-token warmup prompt boundary.
+
+## Qualified data
+
+Only repository-supported sources are used. Seed is 42.
+
+| Source | Frozen qualification | Interpretation |
 | --- | --- | --- |
-| Replace each generated token before the next decode | SGLang `sampler.py:172` applies replay after normal sampling, before logprobs, TP synchronization, and return. The kernel writes the recorded ID in place. | Implemented in SGLang 0.5.10. |
-| Align the token history represented by KV and reuse it next turn | Real 24-token replay, 34 cached tokens on the follow-up, and cached/fresh output agreement with logprob tolerance 0.05. | Supported for a short dense-model test. No workload-level retention, eviction, or recomputation evidence. |
-| Keep replay overhead low | Packed storage and metadata-only batch mutations; ordinary-only batches restore the no-replay path; kernel/device and small whole-request timings recorded. | Component-level evidence. Not an original-benchmark performance comparison. |
-| Avoid additional cache-repair interference | The new client sends recorded turns without repair requests. | No original-versus-new warmup/repair A/B. Existing snapshot warmup is not proved unnecessary. |
-| Verify hash-only public traces and implications | Weka request schema lacks original token IDs; a bounded public-data prefix agrees. | Schema and sampled-prefix confirmation; no full-corpus audit or recovery of original content. |
-| Use meaningful real-token agent workloads, including MoE concerns | Real tokenizer IDs from a newly generated two-turn Qwen2.5 dense-model example. | Mechanism fixture only. No captured agent workload or MoE/multi-GPU validation. |
-| Improve the supplied InferenceX replay path and prepare an important PR | New `token-replay` command, Mooncake raw-payload exporter, SGLang patch, tests, local commits. | Original AgentX scenario/recipes are unchanged; no PR opened. Fork/join dependencies are not represented by the new trace format. |
+| Public Weka | Revision `23f152f6f0f9399a85901b89a6458def0ef16729`; complete source downloaded | Hash-only corpus. Original content and reply IDs are unavailable. Separate default-route reproduction only. |
+| Exgentic v2 SWE-bench | Revision `4b8ad4ab198438e5a170f9171c19c6a2cf7c1814` | Content is re-tokenized for each target model. IDs are not the source model's original IDs. |
+| Dense qualification | 32 sessions, 447 requests; 46 of 1959 candidate sessions examined | Consecutive windows of 4–16 requests; maximum prompt plus output 16143 tokens; no request truncation. Remaining candidates unexamined. |
+| MoE qualification | 21 sessions, 308 requests; 128 candidates examined | The older Qwen1.5 template cannot represent tool-bearing requests faithfully, so those spans are excluded. |
+| MoE synthetic control | 21 sessions, 308 requests from the repository Shakespeare sampler | Per-session prefix tries preserve input/output lengths, every pairwise prompt/full-response LCP, special-token positions and trace metadata. |
 
-## What the implementation changed
+The corrected `exgentic-dense-02` and `exgentic-moe-02` manifests contain source
+files, exclusions, selected windows and target template information. Tool-call
+argument strings are converted back to JSON objects before Qwen's template
+renders them. The older Dense `-01` data double-encoded these arguments in 327
+of 447 outputs and is diagnostic-only.
 
-- Added `replay_token_ids` validation and an OpenAI completion adapter.
-- Staged recorded IDs on GPU and indexed them using the actual decode
-  position. Normal model forward and sampling remain in the path.
-- Replaced longest-response padding with packed storage. Filtering and
-  merging copy request metadata while retaining the backing tensors.
-- Dropped replay state when the last forced request leaves a batch.
-- Added a native exact-ID client and an exporter using the existing
-  harness Mooncake raw-payload loader.
-- Exercised real GPU mutation/lifetime cases, a real model, concurrent
-  HTTP/SSE, and a two-request `aiperf profile` run with raw artifacts.
+Exgentic timestamps are processed source timing; missing DAG structure is not
+invented. The separate MoE service experiment deliberately uses fixed-order,
+zero-wait sequential windows and flushes cache between sessions. It does not
+claim to reproduce source arrival times or an original DAG.
 
-The code stages token IDs, **not precomputed embeddings**. That differs
-from the literal proposal in the minutes: the next normal forward still
-performs its usual embedding lookup. This keeps scheduler history,
-prefix keys, and the next model input consistent without an extra
-embedding-input path. No experiment compares the two implementation
-choices, so this is a justified design choice rather than a measured
-superiority claim.
+## Original-path acceptance
 
-## Claims that must not be conflated
+Evidence is preserved in Git LFS at
+[`entry-evidence-20261106.tar.gz`](../../experimental/token_replay/evidence/entry-evidence-20261106.tar.gz).
+The archive includes the frozen datasets, request records, server wire logs,
+commands, check receipts and negative evidence.
 
-The 32 MiB to 351 KiB storage reduction, 213.78 to 3.37 ms staging change,
-and 252.79 to 18.65 microsecond merge change compare **our padded prototype
-with our compact prototype** on a seeded, skewed-length fixture. They do
-not quantify improvement over the original InferenceX implementation.
-Staging is a single observation per case.
+`dense-dag-02` uses the original InferenceX AgentX command and the bundled Weka
+subagent topology, extended as an explicitly synthetic, token-consistent fixture.
+It completed 198 profiling requests and 42 warmup requests with zero errors;
+the InferenceX collector and validator both completed.
 
-The approximately 1 microsecond replacement timing uses CUDA events over
-100 kernels in a CUDA graph. The production call in `TokenReplayBatch.apply`
-still has host-dispatch cost. It is not a measurement of total per-token
-end-to-end overhead. The six measured short requests per condition do
-not establish a workload-level overhead bound or throughput improvement.
+- All 240 actual wire prompts, replay payloads and final output ID sequences
+  match the source, with one-token caps only during warmup.
+- 52 tree instances have distinct actual wire salts; each tree's parent/children
+  share its salt. Event checks cover 44 joins, 48 reset-bearing trees, 40 from-start
+  profiling trees, and four warmup-to-profile handoffs.
+- 40 consecutive child pairs preserve the expected 0.75-second idle gap; observed
+  gaps are approximately 0.751–0.753 seconds. Joined requests follow all observed
+  children, with explicit complete-child coverage for from-start trees.
+- A separate identical-prompt A/B/A salt witness changes cached-token counts
+  from the broken `[0,63,63]` to `[0,0,63]` after the scheduler fix.
+- The from-start reference obtains cached-token counts `[0,208,231,208,0]` for
+  root, child, child continuation, joined root and disjoint reset respectively.
+- Mixed normal/replay requests of lengths 3, 7 and 13 finish correctly, and a
+  subsequent ordinary request matches its ordinary reference. Both full-trace
+  and warmup-boundary oversize HTTP requests return explicit budget rejections.
 
-The two-request harness check verifies loader, payload, HTTP/SSE, ordering,
-and export behavior. It uses `aiperf --custom-dataset-type mooncake-trace`,
-not the original `agentx profile --public-dataset ...` scenario. There was
-no harness warmup, and cache usage reporting was not enabled. It cannot
-establish removal of the original replay's performance bias.
+The earlier `dense-entry-02` and `dense-dag-01` do not provide valid cache-isolation
+or final-entry evidence. Their failures and pre-fix salt leak remain preserved.
 
-The actual harness source documents pre-profiling snapshot/cache-pressure
-warmup. We have not identified a separate background thread that repairs
-KV during measured decoding. Starting at a sampled midpoint can still
-require initial cache population even with token-exact replay. Therefore
-all warmup must not be classified as avoidable repair work.
+## Dense experiment protocol
 
-## Next work that directly tests the motivation
+Capacity preflight used corrected Exgentic data, concurrency 8 and 120-second
+profiling admission windows. Both conditions completed with zero request errors.
 
-1. Reproduce the original AgentX route on a captured agent trace that
-   includes prompt/response IDs, tool turns, timing, and relevant branch
-   dependencies. Identify exactly which warmup or repair operations occur.
-2. Add the token-replay intervention to that same workload route. Preserve
-   initial-cache conditions, model, seed, arrival pattern, concurrency,
-   token lengths, and normal engine warmup across comparisons.
-3. Compare original replay and token-exact replay against a faithful
-   from-start trajectory reference. Measure cached/new prefill tokens,
-   retention/eviction and recomputation under pressure, extra requests,
-   TTFT/TPOT, per-user and per-GPU throughput, and replay overhead.
-4. Only use a MoE run with representative captured content to claim an
-   effect on expert routing/load balance. If that is outside the first PR,
-   state it explicitly as follow-up work.
+| KV capacity | Profiling requests | Cache hit fraction from server aggregate | Peak KV occupancy | Evicted tokens including warmup |
+| --- | ---: | ---: | ---: | ---: |
+| 131072 | 232 | 0.91162 | 0.33547 | 138234 |
+| 16384 | 110 | 0.10060 | 0.99573 | 1202333 |
 
-The original methodology-level goal remains incomplete until those
-comparisons support it. The completed engineering work is useful and
-aligned, but it should not be presented as proving that InferenceX now
-measures system performance more accurately.
+These numbers qualify two capacities; they are not generated-vs-recorded effects.
+“Roomy” means active working sets fit, not zero eviction of stale independent
+sessions. The pressure condition demonstrably evicts tokens.
 
+[`dense-formal-01.spec.json`](../../experimental/token_replay/dense-formal-01.spec.json)
+freezes 36 points: two modes, concurrency 1/4/8, both capacities, three repeats,
+and 900 seconds of profiling admission per point. Paired order alternates.
+Every point starts a fresh server after a GPU guard; full request logs are off.
+The same GPU0/model/seed/warmup and fixed data apply to both arms.
 
-## Source and evidence pointers
+AgentX remains a closed-loop scheduler: mode-dependent completion times can
+change how many requests and which trace mix fit in 900 seconds. Reports retain
+actual per-source request counts, phase ranges including drain, errors and
+cancellations. Throughput comparisons must retain these denominators. Warmup
+and profiling cache/computation metrics are summarized separately. Existing
+server eviction and retraction counters are retained; a prefix-cache shortfall
+must not automatically be called a measured number of GPU recomputation FLOPs.
 
-- [Replacement kernel and ownership](../../../sglang/python/sglang/srt/sampling/token_replay.py); [sampler insertion point](../../../sglang/python/sglang/srt/layers/sampler.py).
-- [Original AgentX command construction](../infx/bench/agentic/replay.py); [experimental client/exporter](../infx/bench/token_replay.py).
-- [Real-engine correctness and timing inputs](../../experimental/token_replay/check_engine.py); [batch-operation microbenchmark](../../experimental/token_replay/profile_replay.py); [device-time measurement](../../experimental/token_replay/profile_kernel.py).
-- [Preserved engine evidence](../../experimental/token_replay/evidence/engine-check-compact.log); [harness artifact checks](../../experimental/token_replay/check_harness_artifacts.py).
-- [Original snapshot/cache-pressure warmup](../../../agentx-harness/src/aiperf/timing/strategies/agentic_replay.py); [public Weka schema](../../../agentx-harness/src/aiperf/dataset/loader/weka_trace_models.py).
+The independent mechanism-overhead experiment samples 32 fixed real prompts,
+captures their greedy outputs, and compares normal generation against replay of
+those exact outputs at concurrency 1/4/8. Each batch starts from a flushed cache.
+Every measured batch must match output IDs, prompt lengths and cached-token work.
+The timed interval includes HTTP serialization, inference and response receipt;
+equal cache flush operations are outside the timer. Both modes are prewarmed;
+first replay-use request times are stored separately.
+
+The initial three pairs expand directly to five if the interval crosses 3%.
+Bonferroni-adjusted Student t intervals cover the two prespecified looks under
+the t assumptions. Acceptance requires the upper bound to be at most 3% at every
+measured concurrency. The interval describes repeated execution of these fixed
+prompts, not the entire data population or all sampling policies. Retraction
+counters must also be zero before claiming identical computation. A completed
+measurement with `target_met=false` is a valid negative result.
+
+## MoE experiment protocol
+
+The BF16 Qwen1.5-MoE-A2.7B-Chat weights are fixed at revision
+`ec052fda178e241c7c443468d2fa1db6618996be`. GPU2/3 use TP2/EP2, trivial fixed expert
+placement, EPLB disabled, and separate shared experts. The isolated environment
+and a fresh agent following the documented invocation passed the run6 witness.
+That witness proves feasibility and exact 32-token replay, not workload effects.
+
+The full service comparison runs all 308 qualified requests in both real and
+synthetic arms, three paired repetitions with alternating order. Recorder is
+absent from the performance engine. Output IDs are checked exactly on every
+request, with request latency, client TTFT and cached-token counts retained.
+Service throughput divides output count by summed request wall time; it excludes
+flush, file writes and between-session gaps and is not whole-campaign throughput.
+
+Recorder-on runs and per-rank compute/communication diagnostics are separate.
+Recorder histograms are global and replicated across ranks: accumulate sessions
+within one rank, never sum the two replicas. Token load imbalance is not GPU
+execution-time imbalance. The initial first-request profile covers only 1/308
+requests and cannot stand in for workload-wide rank timing.
+
+## Review and remaining completion gates
+
+Fresh Codex reviews found and prompted fixes for target-template argument
+encoding, full-trace admission, DAG-check false positives, HTTP budget-check
+false positives, cache-flush response parsing and overhead warmup/stopping rules.
+The salt-forwarding bug was established by a real failed isolation witness.
+Deterministic/live checks support the specific claims above. Codex positive
+reviews remain provisional. No `claude-review` MCP tool was available, so no
+cross-family review or dual-review acceptance is claimed.
+
+The original-path implementation/short acceptance and capacity qualification are
+complete. The full Dense matrix, final overhead decision, public-Weka GPU run,
+MoE recorder/control perturbation and representative per-rank timing, final
+result interpretation, and final PR validation remain completion gates. Running
+jobs and partial tables do not satisfy those gates.
