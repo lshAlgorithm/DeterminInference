@@ -11,7 +11,11 @@ from pathlib import Path
 def compare_dense(summary: dict) -> dict:
     cells=defaultdict(dict)
     for result in summary['points']:
+        if result['status'] != 'complete' or any(phase['errors_skips_cancelled'] for phase in result['phases'].values()):
+            raise ValueError('failed or erroneous campaign arm cannot enter paired effects')
         point=result['point']
+        if point['mode'] in cells[(point['capacity'],point['concurrency'],point['repeat'])]:
+            raise ValueError('duplicate Dense arm')
         cells[(point['capacity'],point['concurrency'],point['repeat'])][point['mode']]=result
     pairs=[]
     for (capacity,concurrency,repeat),arms in sorted(cells.items()):
