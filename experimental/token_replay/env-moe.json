@@ -13,6 +13,7 @@
   "env": {
     "CUDA_VISIBLE_DEVICES": "2,3",
     "CUDA_HOME": "/home/tegao/infra-token-replay/cuda-toolkit",
+    "PATH": "/home/tegao/infra-token-replay/.venv/bin:/home/tegao/infra-token-replay/cuda-toolkit/bin:/home/tegao/miniconda3/envs/verl_qwen35_sglang/bin:/usr/local/bin:/usr/bin:/bin",
     "OMP_NUM_THREADS": "8",
     "MKL_NUM_THREADS": "8",
     "OPENBLAS_NUM_THREADS": "8"
