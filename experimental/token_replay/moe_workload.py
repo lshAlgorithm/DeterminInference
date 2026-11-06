@@ -46,7 +46,7 @@ def run_workload(engine, source: Path, output: Path, record: bool, profile: bool
         print(json.dumps({'directory': str(output), 'session': path.name, 'completed_requests': len(rows)}), flush=True)
         if profile:
             break
-    summary = {'source': str(source), 'requests': len(rows), 'output_tokens': sum(r['output_tokens'] for r in rows), 'prompt_tokens': sum(r['prompt_tokens'] for r in rows), 'cached_tokens': sum(r['cached_tokens'] for r in rows), 'request_wall_seconds': sum(r['wall_seconds'] for r in rows), 'record': record, 'profile': profile, 'scope': 'fixed ordered sequential windows; cache flushed between sessions; source timings are processed, no original DAG claims'}
+    summary = {'source': str(source), 'requests': len(rows), 'output_tokens': sum(r['output_tokens'] for r in rows), 'prompt_tokens': sum(r['prompt_tokens'] for r in rows), 'cached_tokens': sum(r['cached_tokens'] for r in rows), 'request_wall_seconds': sum(r['wall_seconds'] for r in rows), 'record': record, 'profile': profile, 'scope': 'fixed ordered zero-wait sequential service measurement; source think times omitted; cache flushed between sessions; no original arrival-time or DAG claims'}
     (output/'summary.json').write_text(json.dumps(summary,indent=2))
     return summary
 
