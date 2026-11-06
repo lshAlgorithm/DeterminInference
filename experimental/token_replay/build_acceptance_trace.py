@@ -36,9 +36,13 @@ def build_acceptance_trace(source: Path, output: Path) -> dict:
     ]
     for row, timestamp, inputs, outputs in rows:
         row.update(
-            t=timestamp, model="Qwen2.5-7B-Instruct-GPTQ-Int4",
-            input_ids=inputs, output_ids=outputs, hash_ids=prefix_hashes(inputs),
-            api_time=0.25, think_time=0.5,
+            t=timestamp,
+            model="Qwen2.5-7B-Instruct-GPTQ-Int4",
+            input_ids=inputs,
+            output_ids=outputs,
+            hash_ids=prefix_hashes(inputs),
+            api_time=0.25,
+            think_time=0.5,
         )
         row["in"], row["out"] = len(inputs), len(outputs)
     branch["duration_ms"] = 2000
@@ -52,8 +56,11 @@ def build_acceptance_trace(source: Path, output: Path) -> dict:
         trace["id"] = f"derived-dag-{index}"
         (sessions / f"{index}.json").write_text(json.dumps(trace) + "\n")
     receipt = {
-        "seed": 42, "source": str(source), "sessions": 2,
-        "requests_per_session": 5, "submission_valid": False,
+        "seed": 42,
+        "source": str(source),
+        "sessions": 2,
+        "requests_per_session": 5,
+        "submission_valid": False,
         "content": "synthetic token-consistent fixture; not original Weka content",
         "derivation": "bundled one_subagent topology with a second child turn and root reset",
         "timing": "fixture times; not measured workload timing",
