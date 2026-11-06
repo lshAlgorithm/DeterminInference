@@ -216,6 +216,8 @@ def main() -> None:
         report["result"] = check_engine(
             args.model, args.output, args.record, args.ep_size
         )
+        if args.record:
+            report["routing"] = summarize_recorder(args.output, args.ep_size)
         report["status"] = "passed"
     except BaseException as error:
         report.update(
