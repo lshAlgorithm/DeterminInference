@@ -11,7 +11,7 @@ from summarize_moe import summarize_service
 
 def compare_recorder(root: Path) -> dict:
     pairs = []
-    metrics = ['service_seconds', 'service_output_tps', 'mean_ttft_seconds', 'token_weighted_tpot_seconds']
+    metrics = ['service_seconds', 'service_output_tps', 'mean_ttft_seconds', 'token_weighted_tpot_seconds', 'workload_wall_seconds_including_flush_dump']
     for repeat in range(3):
         dirs = {mode: root/f'moe-perturbation-r{repeat}-{mode}-01' for mode in ['off', 'on']}
         states = {mode: json.loads((path/'status.json').read_text()) for mode, path in dirs.items()}
@@ -35,6 +35,7 @@ def compare_recorder(root: Path) -> dict:
                 summary = json.loads((path/content/'summary.json').read_text())
                 if summary['record'] != (mode == 'on'):
                     raise ValueError('recorder run activation mismatch')
+                arms[mode]['workload_wall_seconds_including_flush_dump'] = summary['workload_wall_seconds_including_flush_dump']
             if arms['off']['work_by_request'] != arms['on']['work_by_request']:
                 raise ValueError('on/off token or cached-work mismatch')
             pairs.append({'repeat': repeat, 'content': content, 'arms': arms,
@@ -51,7 +52,7 @@ def compare_recorder(root: Path) -> dict:
             half = 4.302652729911275*statistics.stdev(values)/math.sqrt(3)
             estimates[content][metric] = {'mean': mean, 'ci95': [mean-half, mean+half]}
     return {'complete': True, 'pairs': pairs, 'estimates': estimates,
-            'scope': 'three alternating recorder-on/off engine pairs per fixed content workload; full matched input/output/cache work; service timing excludes session dump, cache flush, startup and file I/O; initialization separately recorded; repeated-run t intervals, not population intervals'}
+            'scope': 'three alternating recorder-on/off engine pairs per fixed content workload; full matched input/output/cache work; service timing excludes session dump, cache flush, startup and file I/O; workload wall time includes flush/dump/request writes but excludes initialization and post-run histogram analysis; initialization separately recorded; repeated-run t intervals, not population intervals'}
 
 
 if __name__ == '__main__':
