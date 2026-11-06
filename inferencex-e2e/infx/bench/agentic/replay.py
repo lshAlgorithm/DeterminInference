@@ -76,7 +76,9 @@ class ReplayConfig:
         mode = inputs.optional("AGENTX_REPLAY_MODE", env)
         if token_trace or mode:
             if not token_trace or mode not in {"generated", "recorded"}:
-                raise inputs.InputError("AGENTX_TOKEN_TRACE and AGENTX_REPLAY_MODE=generated|recorded are required together")
+                raise inputs.InputError(
+                    "AGENTX_TOKEN_TRACE and AGENTX_REPLAY_MODE=generated|recorded are required together"
+                )
             inputs.require("AGENTX_HARNESS_WHEEL", "AGENTX_HARNESS_SHA256", env=env)
             if "sglang" not in values["FRAMEWORK"]:
                 raise inputs.InputError("token experiments require the patched SGLang backend")
