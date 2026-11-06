@@ -55,7 +55,9 @@ def encode_span(span: dict[str, Any], tokenizer: Any) -> dict[str, Any]:
     attributes = span.get("attributes") or {}
     if (span.get("status") or {}).get("code") == 2:
         raise ValueError("failed_source_call")
-    messages = _normalize_system_instructions(attributes.get("gen_ai.system_instructions"))
+    messages = _normalize_system_instructions(
+        attributes.get("gen_ai.system_instructions")
+    )
     messages += _normalize_messages(attributes.get("gen_ai.input.messages"))
     outputs = _normalize_messages(attributes.get("gen_ai.output.messages"))
     if len(outputs) != 1 or outputs[0]["role"] != "assistant":
@@ -72,11 +74,18 @@ def encode_span(span: dict[str, Any], tokenizer: Any) -> dict[str, Any]:
     complete = tokenizer.apply_chat_template(
         messages + outputs, tokenize=False, add_generation_prompt=False, **template_args
     )
-    if tools and prompt == tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True):
+    if tools and prompt == tokenizer.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True
+    ):
         raise ValueError("target_template_drops_tool_definitions")
     if any(message.get("tool_calls") for message in messages + outputs):
-        without_calls = [{key: value for key, value in message.items() if key != "tool_calls"} for message in messages + outputs]
-        if complete == tokenizer.apply_chat_template(without_calls, tokenize=False, add_generation_prompt=False, **template_args):
+        without_calls = [
+            {key: value for key, value in message.items() if key != "tool_calls"}
+            for message in messages + outputs
+        ]
+        if complete == tokenizer.apply_chat_template(
+            without_calls, tokenize=False, add_generation_prompt=False, **template_args
+        ):
             raise ValueError("target_template_drops_tool_calls")
     for message in messages + outputs:
         if message.get("content") and message["content"] not in complete:
