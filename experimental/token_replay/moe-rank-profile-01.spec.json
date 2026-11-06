@@ -68,6 +68,6 @@
     "method": "request input and output length quantiles 0,25,50,75,100 percent; selected before timing",
     "selected": 9,
     "available": 308,
-    "scope": "all preceding session requests preserve cache history; target prefill plus first32 client-observed outputs profiled; full request still executes"
+    "scope": "all preceding session requests preserve cache history; each of9 selected requests profiled in full; profiler runs excluded from service performance"
   }
 }
