@@ -1,0 +1,45 @@
+{
+  "wait_for": "/home/tegao/infra-token-replay/dense-analysis-stages-01/status.json",
+  "stages": [
+    {
+      "name": "verify-delivery",
+      "env": {},
+      "cmd": [
+        "/home/tegao/infra-token-replay/.harness/bin/python",
+        "/home/tegao/infra-token-replay/verify_delivery.py",
+        "--root",
+        "/home/tegao/infra-token-replay",
+        "--output",
+        "/home/tegao/infra-token-replay/delivery-verification.json"
+      ]
+    },
+    {
+      "name": "archive-dense",
+      "env": {},
+      "cmd": [
+        "nice",
+        "-n",
+        "19",
+        "tar",
+        "-czf",
+        "/home/tegao/infra-token-replay/dense-formal-evidence-20261106.tar.gz",
+        "-C",
+        "/home/tegao/infra-token-replay",
+        "dense-formal-01",
+        "dense-formal-01-summary.json",
+        "dense-formal-01-comparison.json",
+        "dense-corpus-audit-01",
+        "dense-corpus-audit-01.spec.json",
+        "dense-formal-01.spec.json",
+        "dense-analysis-stages-01",
+        "dense-audit-stages-01",
+        "delivery-verification.json",
+        "verify_delivery.py",
+        "audit_dense_usage.py",
+        "summarize_campaign.py",
+        "compare_dense.py",
+        "model-content-manifest-20261106.json"
+      ]
+    }
+  ]
+}
