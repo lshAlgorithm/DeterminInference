@@ -158,6 +158,27 @@ experiment above supplies the scoped3% decision. Source, timing protocol and
 samples are retained in `profile_replay.py`, `replay-profile-compact.log` and
 `replay-kernel-compact.log`.
 
+A further standalone allocator probe used32 actual qualified response sequences,
+seed42, on idle GPU2 after the model studies. It measured44 admissions across
+concurrency1/4/8, with filtering and merges, and observed:
+
+| Concurrency | Largest token+metadata payload (bytes) | Largest live staged allocation delta (bytes) | Largest allocator peak delta (bytes) |
+| --- | ---: | ---: | ---: |
+| 1 | 2536 | 3072 | 4096 |
+| 4 | 4120 | 4608 | 5632 |
+| 8 | 8192 | 8704 | 9728 |
+
+Every admission returned to its allocated-byte baseline after all replay views
+were released. Filtering retains the shared packed buffer even when fewer
+responses remain. A preallocated index tensor already held a2MiB reserved pool;
+zero additional reserved bytes therefore does not mean zero reserved memory.
+First CUDA allocation took183.56ms; per-stage synchronized host medians were
+226–278us for staging,85–86us for filtering, and84–85us for merging. These single-
+operation synchronized timings differ from the20-call amortized fixture above.
+This is actual component allocator evidence for the selected responses, not
+whole-serving incremental VRAM or a population maximum. It does not replace
+HTTP end-to-end overhead measurement.
+
 ## Public Weka reference qualification
 
 The original public corpus has393 traces but no complete trace qualifies at16K:
