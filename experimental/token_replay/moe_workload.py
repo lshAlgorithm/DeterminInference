@@ -49,3 +49,49 @@ def run_workload(engine, source: Path, output: Path, record: bool, profile: bool
     summary = {'source': str(source), 'requests': len(rows), 'output_tokens': sum(r['output_tokens'] for r in rows), 'prompt_tokens': sum(r['prompt_tokens'] for r in rows), 'cached_tokens': sum(r['cached_tokens'] for r in rows), 'request_wall_seconds': sum(r['wall_seconds'] for r in rows), 'record': record, 'profile': profile, 'scope': 'fixed ordered sequential windows; cache flushed between sessions; source timings are processed, no original DAG claims'}
     (output/'summary.json').write_text(json.dumps(summary,indent=2))
     return summary
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--spec', type=Path, required=True)
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    spec = json.loads(args.spec.read_text())
+    args.output.mkdir(parents=True, exist_ok=False)
+    os.environ['SGLANG_EXPERT_DISTRIBUTION_RECORDER_DIR'] = str(args.output)
+    import sglang as sgl
+    status = {'status': 'starting', 'seed': 42, 'gpu_guard': guard_gpus(), 'spec': spec, 'completed': []}
+    engine = None
+    try:
+        started = time.perf_counter()
+        engine = sgl.Engine(**spec['settings'])
+        status['initialization_seconds'] = time.perf_counter()-started
+        status['server_info'] = engine.get_server_info()
+        for source in spec['sources'].values():
+            request = json.loads(sorted(Path(source).glob('*.json'))[0].read_text())['requests'][0]
+            engine.generate(input_ids=request['input_ids'], sampling_params={'temperature':0, 'max_new_tokens':len(request['output_ids']), 'ignore_eos':True,'sampling_seed':42,'replay_token_ids':request['output_ids']})
+            engine.flush_cache()
+        status['status'] = 'running'
+        for run in spec['runs']:
+            status['current'] = run['name']
+            (args.output/'status.json').write_text(json.dumps(status,indent=2))
+            before = set(args.output.glob('expert_distribution_recorder_*.pt'))
+            summary = run_workload(engine, Path(spec['sources'][run['content']]), args.output/run['name'], run['record'], run['profile'])
+            if run['record']:
+                for path in set(args.output.glob('expert_distribution_recorder_*.pt')) - before:
+                    path.rename(args.output/run['name']/path.name)
+                routing = summarize_recorder(args.output/run['name'], 2)
+                (args.output/run['name']/'routing.json').write_text(json.dumps(routing,indent=2))
+            status['completed'].append(summary)
+        status['status'] = 'complete'
+    except BaseException as error:
+        status.update(status='failed', error=repr(error))
+        raise
+    finally:
+        if engine is not None:
+            engine.shutdown()
+        (args.output/'status.json').write_text(json.dumps(status,indent=2))
+
+
+if __name__ == '__main__':
+    main()
