@@ -428,10 +428,10 @@
   },
   "code": {
     "inferencex_entry_commit": "4ac6a90",
-    "campaign_runner_commit": "686fb63",
+    "campaign_runner_commit": "013bf6e",
     "sglang_commit": "d611ff2",
     "harness_commit": "b9772d2",
-    "serving_overlay": "evidence/serving-source-20261106.tar.gz",
+    "serving_overlay": "evidence/serving-source-residency-20261106.tar.gz",
     "seed": 42
   },
   "residency_observation": "server_info snapshots every5s; no per-token instrumentation"
