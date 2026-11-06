@@ -42,7 +42,10 @@ def compare_dense(summary: dict) -> dict:
             half=4.302653*statistics.stdev(data)/math.sqrt(3) if len(data)==3 else None
             row[metric]={'pairs':len(data),'mean':mean,'ci95':None if half is None else [mean-half,mean+half]}
         estimates.append(row)
-    return {'paired_results':pairs,'estimates':estimates,'complete_36_points':len(summary['points'])==36 and len(pairs)==18 and all(r['status']=='complete' for r in summary['points']),'scope':'closed-loop900s AgentX admission; throughput denominator includes actual drain; per-source standardization uses rows common to each pair, equally once per source row and weighted by prompt tokens; three-pair t intervals describe these runs, not source-population generalization'}
+    expected_cells={(capacity,concurrency,repeat,mode) for capacity in [131072,16384] for concurrency in [1,4,8] for repeat in range(3) for mode in ['generated','recorded']}
+    actual_cells={(r['point']['capacity'],r['point']['concurrency'],r['point']['repeat'],r['point']['mode']) for r in summary['points']}
+    complete=len(summary['points'])==36 and len(pairs)==18 and actual_cells==expected_cells and all(r['point']['duration']==900 for r in summary['points'])
+    return {'paired_results':pairs,'estimates':estimates,'complete_36_points':complete,'scope':'closed-loop900s AgentX admission; throughput denominator includes actual drain; per-source standardization uses rows common to each pair, equally once per source row and weighted by prompt tokens; three-pair t intervals describe these runs, not source-population generalization'}
 
 
 if __name__=='__main__':
