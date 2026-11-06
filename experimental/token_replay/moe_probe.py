@@ -86,9 +86,10 @@ def check_engine(model: Path, output: Path, record: bool, ep_size: int) -> dict:
                 "content": "Explain why prefix caching can accelerate a multi-turn agent.",
             }
         ],
-        tokenize=True,
+        tokenize=False,
         add_generation_prompt=True,
     )
+    prompt = tokenizer.encode(prompt, add_special_tokens=False)
     settings = {
         "model_path": str(model),
         "dtype": "bfloat16",
