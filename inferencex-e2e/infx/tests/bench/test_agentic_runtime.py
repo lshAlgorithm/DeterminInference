@@ -123,3 +123,20 @@ def test_unusable_runtime_fails_with_the_reason(tmp_path, tools, monkeypatch, fa
 
     with pytest.raises(BenchError, match=message):
         bootstrap(Runtime(tmp_path / "runtime"))
+
+
+def test_bootstrap_installs_digest_pinned_wheel(tmp_path, tools, monkeypatch):
+    import hashlib
+
+    wheel = tmp_path / "agentx_harness-1.0.13-py3-none-any.whl"
+    wheel.write_bytes(b"explicit test artifact")
+    monkeypatch.setenv("AGENTX_HARNESS_WHEEL", str(wheel))
+    monkeypatch.setenv("AGENTX_HARNESS_SHA256", hashlib.sha256(wheel.read_bytes()).hexdigest())
+    executable(tools / "uv", FAKE_UV)
+    runtime = Runtime(tmp_path / "runtime")
+    assert bootstrap(runtime) == 0
+    calls = (tmp_path / "uv-calls").read_text().splitlines()
+    assert calls[-3:] == ["--reinstall", "--no-deps", str(wheel)]
+    assert (runtime.root / "harness-wheel.sha256").read_text().startswith(
+        hashlib.sha256(wheel.read_bytes()).hexdigest()
+    )
