@@ -45,17 +45,20 @@ index e947a48..fa42f7e 100644
          if return_logprob:
              if SGLANG_RETURN_ORIGINAL_LOGPROB:
 diff --git a/python/sglang/srt/managers/scheduler.py b/python/sglang/srt/managers/scheduler.py
-index 67af2d0..1f37e22 100644
+index 67af2d0..77d92d1 100644
 --- a/python/sglang/srt/managers/scheduler.py
 +++ b/python/sglang/srt/managers/scheduler.py
-@@ -1610,13 +1610,22 @@ class Scheduler(
+@@ -1610,13 +1610,25 @@ class Scheduler(
          self._check_pending_flush()
  
      def init_req_max_new_tokens(self, req):
 +        available_tokens = self.max_req_len - len(req.origin_input_ids) - 1
 +        if (
 +            req.sampling_params.replay_token_ids is not None
-+            and len(req.sampling_params.replay_token_ids) > available_tokens
++            and (
++                len(req.sampling_params.replay_token_ids) > available_tokens
++                or len(req.origin_input_ids) >= self.max_req_input_len
++            )
 +        ):
 +            req.set_finish_with_abort(
 +                "token replay exceeds the scheduler's full-trace token budget"
@@ -72,6 +75,14 @@ index 67af2d0..1f37e22 100644
          )
  
      def _process_and_broadcast_mm_inputs(
+@@ -1767,6 +1779,7 @@ class Scheduler(
+                 disagg_prefill_dp_rank=recv_req.disagg_prefill_dp_rank,
+                 vocab_size=self.model_config.vocab_size,
+                 priority=recv_req.priority,
++                extra_key=recv_req.extra_key,
+                 metrics_collector=(
+                     self.metrics_collector if self.enable_metrics else None
+                 ),
 diff --git a/python/sglang/srt/managers/tokenizer_manager.py b/python/sglang/srt/managers/tokenizer_manager.py
 index 8142432..6da9c2b 100644
 --- a/python/sglang/srt/managers/tokenizer_manager.py
