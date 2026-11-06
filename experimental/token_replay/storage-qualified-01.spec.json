@@ -1,0 +1,26 @@
+{
+  "seed": 42,
+  "gpu_indices": [
+    2
+  ],
+  "env": {
+    "CUDA_VISIBLE_DEVICES": "2",
+    "CUDA_HOME": "/home/tegao/infra-token-replay/cuda-toolkit",
+    "PATH": "/home/tegao/infra-token-replay/.venv/bin:/home/tegao/infra-token-replay/cuda-toolkit/bin:/home/tegao/miniconda3/envs/verl_qwen35_sglang/bin:/usr/local/bin:/usr/bin:/bin",
+    "OMP_NUM_THREADS": "8",
+    "MKL_NUM_THREADS": "8",
+    "OPENBLAS_NUM_THREADS": "8",
+    "PYTHONPATH": "/home/tegao/infra-token-replay/python"
+  },
+  "cmd": [
+    "/home/tegao/infra-token-replay/.venv/bin/python",
+    "/home/tegao/infra-token-replay/measure_storage.py",
+    "--source",
+    "/home/tegao/infra-token-replay/exgentic-dense-02/sessions",
+    "--output",
+    "/home/tegao/infra-token-replay/storage-qualified-01"
+  ],
+  "source_commit": "25ecb73",
+  "script_sha256": "08d3aa770f17d61cec4501fa93c9a6c217b49a0de3a129b52cd4959d28552fdf",
+  "scope": "standalone component allocator and maintenance measurement, not whole-serving VRAM or end-to-end latency"
+}
