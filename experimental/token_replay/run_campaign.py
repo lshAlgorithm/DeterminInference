@@ -78,7 +78,9 @@ def run_point(spec: dict, point: dict, output: Path) -> dict:
         with (directory / 'gpu.jsonl').open('x') as memory:
             while client.poll() is None:
                 snapshot = subprocess.check_output(['nvidia-smi', '--query-gpu=index,memory.used,utilization.gpu,power.draw', '--format=csv,noheader,nounits'], text=True)
-                memory.write(json.dumps({'elapsed_seconds': time.monotonic()-started, 'gpu': snapshot})+'\n')
+                with urllib.request.urlopen(url + '/get_server_info', timeout=30) as response:
+                    info = json.load(response)
+                memory.write(json.dumps({'elapsed_seconds': time.monotonic()-started, 'gpu': snapshot, 'internal_states': info.get('internal_states')})+'\n')
                 memory.flush()
                 if server.poll() is not None:
                     raise RuntimeError(f'server exited during benchmark {server.returncode}')
