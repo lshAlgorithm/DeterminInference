@@ -70,8 +70,9 @@ def model_manifest(model: Path) -> dict:
 
 
 def check_engine(model: Path, output: Path, record: bool, ep_size: int) -> dict:
-    import sglang as sgl
     from transformers import AutoTokenizer
+
+    import sglang as sgl
 
     tokenizer = AutoTokenizer.from_pretrained(model)
     prompt = tokenizer.apply_chat_template(
@@ -84,35 +85,35 @@ def check_engine(model: Path, output: Path, record: bool, ep_size: int) -> dict:
         tokenize=True,
         add_generation_prompt=True,
     )
-    settings = dict(
-        model_path=str(model),
-        dtype="bfloat16",
-        tp_size=2,
-        ep_size=ep_size,
-        random_seed=42,
-        skip_tokenizer_init=True,
-        attention_backend="triton",
-        moe_runner_backend="triton",
-        moe_a2a_backend="none",
-        enable_eplb=False,
-        init_expert_location="trivial",
-        disable_shared_experts_fusion=True,
-        mem_fraction_static=0.82,
-        context_length=16384,
-        max_total_tokens=16384,
-        max_running_requests=8,
-        cuda_graph_max_bs=8,
-        disable_piecewise_cuda_graph=True,
-        expert_distribution_recorder_mode="per_token" if record else None,
-        log_level="info",
-    )
+    settings = {
+        "model_path": str(model),
+        "dtype": "bfloat16",
+        "tp_size": 2,
+        "ep_size": ep_size,
+        "random_seed": 42,
+        "skip_tokenizer_init": True,
+        "attention_backend": "triton",
+        "moe_runner_backend": "triton",
+        "moe_a2a_backend": "none",
+        "enable_eplb": False,
+        "init_expert_location": "trivial",
+        "disable_shared_experts_fusion": True,
+        "mem_fraction_static": 0.82,
+        "context_length": 16384,
+        "max_total_tokens": 16384,
+        "max_running_requests": 8,
+        "cuda_graph_max_bs": 8,
+        "disable_piecewise_cuda_graph": True,
+        "expert_distribution_recorder_mode": "per_token" if record else None,
+        "log_level": "info",
+    }
     started = time.perf_counter()
     engine = sgl.Engine(**settings)
     init_seconds = time.perf_counter() - started
     try:
-        params = dict(
-            temperature=0, max_new_tokens=32, ignore_eos=True, sampling_seed=42
-        )
+        params = {
+            "temperature": 0, "max_new_tokens": 32, "ignore_eos": True, "sampling_seed": 42
+        }
         generated = engine.generate(input_ids=prompt, sampling_params=params)
         recorded = generated["output_ids"]
         engine.flush_cache()
@@ -140,15 +141,15 @@ def check_engine(model: Path, output: Path, record: bool, ep_size: int) -> dict:
         if record:
             engine.stop_expert_distribution_record()
             engine.dump_expert_distribution_record()
-        return dict(
-            settings=settings,
-            initialization_seconds=init_seconds,
-            generated=generated,
-            replayed=replayed,
-            followup=cached,
-            server_info=engine.get_server_info(),
-            scope="correctness feasibility fixture, not agent workload or performance evidence",
-        )
+        return {
+            "settings": settings,
+            "initialization_seconds": init_seconds,
+            "generated": generated,
+            "replayed": replayed,
+            "followup": cached,
+            "server_info": engine.get_server_info(),
+            "scope": "correctness feasibility fixture, not agent workload or performance evidence",
+        }
     finally:
         engine.shutdown()
 
