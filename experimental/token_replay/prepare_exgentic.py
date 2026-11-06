@@ -216,7 +216,7 @@ def make_weka(
 def source_candidates(
     folder: Path,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    import pyarrow.parquet as parquet
+    from pyarrow import parquet
 
     sources = []
     candidates = []
