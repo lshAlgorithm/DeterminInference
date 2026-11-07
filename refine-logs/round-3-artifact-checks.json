@@ -1,0 +1,43 @@
+{
+  "scope": "Document consistency only; no semantic acceptance, no code tests or GPU execution",
+  "canonical_files": 13,
+  "manifest_files": 47,
+  "local_links_checked": 51,
+  "anchor_preserved": true,
+  "claims_identical": true,
+  "errors": [],
+  "passed": true,
+  "canonical_sha256": {
+    "B1_INTERFACE_NOTES.md": "05ece1620e4b1e61836359eabff8794620667f4842c34a9640193259fd292157",
+    "EXPERIMENT_PLAN.md": "21f54b41c03e23685ec1c1729bbee543292c70415ceb2425ad6558defe2f488d",
+    "EXPERIMENT_TRACKER.md": "b368f384f41f4ee0b9e527283aa11a4587eee8856b2582cd73cee740e28c2f75",
+    "FINAL_PROPOSAL.md": "5a2f5e14b096c3d72a9dd214485aedd59e60c5fcad0f4d465880f4f97d640cd9",
+    "GROUNDING.md": "786d6bc9736d94cdca43696093cfcc6980382c2ff01220e5038510360d22c7cc",
+    "PIPELINE_SUMMARY.md": "f1f90357ebb3320aa0149a92e4ba50f94cdc870b363506b0d3bd20516143afc4",
+    "PLANNING_GATE.md": "e76185d1d62a8f95fb4b6ad6aad17b9bdb65ac5dd78c2b521fd9e9a2e63b969b",
+    "PROBLEM_ANCHOR.md": "538bdd531d44f6cbd65d20612cc9bac4c72666a06da25a8cbc863bf19d53f970",
+    "REFINEMENT_REPORT.md": "7f86da705e6100c6ebbd36c012a95567e4a4a87ea13e6fed0ca9c830817788cd",
+    "REFINE_STATE.json": "22d81dbc7e8f1eead5f42c88848e812475dbbe990cc32c2b19fd551b955d57db",
+    "REVIEW_AVAILABILITY.md": "984144efa8fa5a5aa6d0e1c4f51aee73f767385afe41c401b763f534287c807b",
+    "REVIEW_SUMMARY.md": "9b3bc76e18fe18ce07b2902f6ba1410d4d65ed7ba44d4bc52e8c067eaca81cd0",
+    "score-history.md": "ba4ad4021452d8d51cd46aae2bba198b3e1ed0f1132c8bcbf272e03ab4ef331a"
+  },
+  "weighted_scores_recomputed": [
+    7.65,
+    8.9,
+    9.15
+  ],
+  "review_freeze": "27ea0750787eddf8f69fedcd402d633b4d4ed355",
+  "gpu_jobs_launched_by_pipeline": 0,
+  "acceptance_scope": "Structural document checks pass; independent semantic review remains Codex-only provisional; B1 TODO, B2 DEFERRED.",
+  "checked_properties": [
+    "manifest file existence and output registration",
+    "latest copy bytes equal latest timestamped version",
+    "immutable anchor in all full proposal/review/report records",
+    "verbatim C1/C2 across final proposal, experiment plan and pipeline summary",
+    "canonical local links resolve",
+    "JSON parses",
+    "initial freeze artifacts unchanged",
+    "review-weight arithmetic"
+  ]
+}

@@ -49,3 +49,18 @@
 | 2026-11-07T10:18:41+08:00 | /research-refine-pipeline | refine-logs/round-2-refinement.md | implementation | Correct streaming abort protocol and status vocabulary with full revised proposal |
 | 2026-11-07T10:18:41+08:00 | /research-refine-pipeline | refine-logs/REFINE_STATE_20261107_101841.json | implementation | Round 2 correction checkpoint |
 | 2026-11-07T10:18:41+08:00 | /research-refine-pipeline | refine-logs/REFINE_STATE.json | implementation | Round 2 correction checkpoint |
+| 2026-11-07T10:18:59+08:00 | /research-refine-pipeline | refine-logs/round-2-review.md | implementation | Independent Codex planning review of frozen commit 533a811; 8.90 REVISE; streaming abort specification correction; provisional; Claude unavailable |
+| 2026-11-07T10:19:22+08:00 | /research-refine-pipeline | refine-logs/REFINE_STATE_20261107_101922.json | implementation | Fresh focused re-review checkpoint |
+| 2026-11-07T10:19:22+08:00 | /research-refine-pipeline | refine-logs/REFINE_STATE.json | implementation | Fresh focused re-review checkpoint |
+| 2026-11-07T10:20:53+08:00 | /research-refine-pipeline | refine-logs/score-history_20261107_102053.md | implementation | Final independent review score history with calibration and acceptance limits |
+| 2026-11-07T10:20:53+08:00 | /research-refine-pipeline | refine-logs/score-history.md | implementation | Final independent review score history with calibration and acceptance limits |
+| 2026-11-07T10:20:53+08:00 | /research-refine-pipeline | refine-logs/REVIEW_SUMMARY_20261107_102053.md | implementation | Final round-by-round review record and provisional planning verdict |
+| 2026-11-07T10:20:53+08:00 | /research-refine-pipeline | refine-logs/REVIEW_SUMMARY.md | implementation | Final round-by-round review record and provisional planning verdict |
+| 2026-11-07T10:20:53+08:00 | /research-refine-pipeline | refine-logs/REFINEMENT_REPORT_20261107_102053.md | implementation | Final refinement report preserving anchor, decisions, review scopes and empirical gaps |
+| 2026-11-07T10:20:53+08:00 | /research-refine-pipeline | refine-logs/REFINEMENT_REPORT.md | implementation | Final refinement report preserving anchor, decisions, review scopes and empirical gaps |
+| 2026-11-07T10:20:53+08:00 | /research-refine-pipeline | refine-logs/PIPELINE_SUMMARY_20261107_102053.md | implementation | Final engineering pipeline summary with exact shared claims and next execution gate |
+| 2026-11-07T10:20:53+08:00 | /research-refine-pipeline | refine-logs/PIPELINE_SUMMARY.md | implementation | Final engineering pipeline summary with exact shared claims and next execution gate |
+| 2026-11-07T10:20:53+08:00 | /research-refine-pipeline | refine-logs/REFINE_STATE_20261107_102053.json | implementation | Completed planning workflow with explicit pending empirical work and review gap |
+| 2026-11-07T10:20:53+08:00 | /research-refine-pipeline | refine-logs/REFINE_STATE.json | implementation | Completed planning workflow with explicit pending empirical work and review gap |
+| 2026-11-07T10:21:16+08:00 | /research-refine-pipeline | refine-logs/round-3-review.md | implementation | Independent Codex abort-contract re-review of freeze 27ea075; READY 9.15/10, provisional; Claude unavailable |
+| 2026-11-07T10:21:35+08:00 | /research-refine-pipeline | refine-logs/round-3-artifact-checks.json | implementation | Final deterministic document consistency receipt |

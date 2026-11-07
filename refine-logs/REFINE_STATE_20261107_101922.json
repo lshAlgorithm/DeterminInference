@@ -1,0 +1,16 @@
+{
+  "phase": "review",
+  "round": 3,
+  "threadId": null,
+  "last_score": 8.9,
+  "last_verdict": "REVISE",
+  "status": "in_progress",
+  "target": "engineering PR / technical report",
+  "timestamp": "2026-11-07T10:19:22.470636+08:00",
+  "claude_review": "unavailable",
+  "calibration": "none",
+  "acceptance_status": "provisional",
+  "gpu_jobs_launched": 0,
+  "pending_review": "27ea075 streaming abort correction",
+  "reviewed_freeze": "27ea075"
+}

@@ -1,15 +1,23 @@
 {
-  "phase": "refine",
-  "round": 2,
+  "phase": "done",
+  "round": 3,
   "threadId": null,
-  "last_score": 8.9,
-  "last_verdict": "REVISE",
-  "status": "in_progress",
+  "last_score": 9.15,
+  "last_verdict": "READY",
+  "status": "completed",
+  "completion_scope": "refinement and experiment-planning artifacts only",
   "target": "engineering PR / technical report",
-  "timestamp": "2026-11-07T10:18:41.133988+08:00",
+  "timestamp": "2026-11-07T10:20:53.587859+08:00",
   "claude_review": "unavailable",
+  "review_gate": "incomplete_cross_family_review",
   "calibration": "none",
   "acceptance_status": "provisional",
   "gpu_jobs_launched": 0,
-  "pending_review": "streaming abort and outcome terminology correction"
+  "reviewed_freeze": "27ea075",
+  "implementation_changes_this_pipeline": false,
+  "followup": {
+    "B0": "complete_existing_evidence",
+    "B1": "todo",
+    "B2": "deferred"
+  }
 }
