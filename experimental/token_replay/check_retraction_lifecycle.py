@@ -312,3 +312,21 @@ def validate_lifecycle(receipt: dict, events: list[dict]) -> dict:
     return result
 
 
+def make_request(spec: dict, concurrency: int, role: str, source_index: int,
+                 replay: bool, ordinary: list[int] | None = None) -> dict:
+    row = spec["selected"][source_index]
+    request = row["request"]
+    tag = canonical_hash([spec["spec_sha256"], concurrency, role, source_index])[:24]
+    rid = "b1-" + tag
+    params = {**spec["sampling"], "max_new_tokens": row["expected_length"]}
+    if replay:
+        params["replay_token_ids"] = request["output_ids"]
+    return {"rid": rid, "role": role, "source_index": source_index, "replay": replay,
+            "input_ids": request["input_ids"],
+            "expected": request["output_ids"] if replay else ordinary,
+            "payload": {"rid": rid, "input_ids": request["input_ids"], "extra_key": "salt-" + tag,
+                        "sampling_params": params, "stream": True,
+                        "incremental_streaming_output": False},
+            "packets": [], "terminal": False, "first_partial_count": 0}
+
+
