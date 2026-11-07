@@ -61,3 +61,48 @@ def load_qualified_rows(archive: Path, manifest_path: Path, reference_path: Path
     return rows
 
 
+def build_spec(rows: list[dict], identity: dict) -> dict:
+    required = ("model_sha256", "serving_source_sha256", "observer_sha256", "wheel_sha256")
+    for key in required:
+        value = identity.get(key, "")
+        if len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
+            raise ValueError(f"identity requires a SHA256: {key}")
+    eligible = sorted((r for r in rows if len(r["request"]["output_ids"]) >= 64
+                       and len(r["request"]["input_ids"]) + len(r["request"]["output_ids"]) <= 16384),
+                      key=lambda r: (r["source_file"], r["source_row"]))
+    random.Random(42).shuffle(eligible)
+    selected, lengths = [], set()
+    for row in eligible:
+        length = len(row["request"]["output_ids"])
+        if length in lengths:
+            continue
+        lengths.add(length)
+        selected.append({**row, "expected_length": length,
+                         "input_sha256": canonical_hash(row["request"]["input_ids"]),
+                         "output_sha256": canonical_hash(row["request"]["output_ids"])})
+        if len(selected) == 8:
+            break
+    if len(selected) != 8:
+        raise ValueError("eight distinct eligible lengths are required before execution")
+    spec = {"schema_version": 1, "seed": 42, "identity": identity,
+            "driver_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+            "source_requests": len(rows), "selected": selected,
+            "model": "Qwen2.5-7B-Instruct-GPTQ-Int4",
+            "server": {"context_length": 16384, "max_total_tokens": 131072,
+                       "max_running_requests": 16, "cuda_graph_max_bs": 16,
+                       "attention_backend": "triton", "random_seed": 42,
+                       "disable_cuda_graph": True},
+            "trigger": {"SGLANG_TEST_RETRACT": "true", "SGLANG_TEST_RETRACT_INTERVAL": "3",
+                        "SGLANG_TEST_RETRACT_NO_PREFILL_BS": "2147483648"},
+            "attempts": [4, 8], "attempt_seconds": 600, "allocation_seconds": 1800,
+            "io_timeout_seconds": 10, "cleanup_seconds": 30,
+            "sampling": {"temperature": 0, "ignore_eos": True, "sampling_seed": 42},
+            "ordinary_source_index": min(range(4), key=lambda i: selected[i]["expected_length"]),
+            "schedule": {"mix": "longest replay, then c-2 shorter replays and one ordinary; peak c",
+                         "cancel": "remaining selected source row, after mixed requests drain",
+                         "followup": "ordinary and same-source fresh replay after terminal abort and retirement"},
+            "scope": "controlled lifecycle correctness only; no timing or KV-equality claim"}
+    spec["spec_sha256"] = canonical_hash(spec)
+    return spec
+
+
