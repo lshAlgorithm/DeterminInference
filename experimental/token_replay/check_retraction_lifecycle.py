@@ -136,3 +136,22 @@ def validate_packet(packet: dict, rid: str, expected: list[int] | None, last_cou
     return {"count": count, "terminal": reason is not None, "abort": abort}
 
 
+def read_observer_events(prefix: Path) -> list[dict]:
+    events, seen, last = [], set(), {}
+    for path in sorted(prefix.parent.glob(prefix.name + ".*.jsonl")):
+        if path.stat().st_size > 256 * 1024 * 1024:
+            raise ValueError("observer file exceeds bounded input size")
+        with path.open() as source:
+            for line in source:
+                event = json.loads(line)
+                key = (event.get("pid"), event.get("seq"))
+                if event.get("schema_version") != 1 or type(key[0]) is not int or type(key[1]) is not int:
+                    raise ValueError("invalid lifecycle observer event identity")
+                if key in seen or key[1] <= last.get(key[0], -1):
+                    raise ValueError("duplicate or nonmonotonic lifecycle observer event")
+                seen.add(key)
+                last[key[0]] = key[1]
+                events.append(event)
+    return sorted(events, key=lambda e: (e["time_ns"], e["pid"], e["seq"]))
+
+
