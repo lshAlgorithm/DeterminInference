@@ -394,3 +394,23 @@ def receive_message(messages: queue.Queue, records: dict[str, dict], deadline_ns
         record["aborted"] = state["abort"]
 
 
+def abort_owned_request(url: str, record: dict, deadline_ns: int, cleanup: bool = False) -> dict:
+    if not record["rid"].startswith("b1-"):
+        raise ValueError("refusing cancellation outside this driver's request namespace")
+    remaining = (deadline_ns - time.time_ns()) / 1e9
+    if remaining <= 0:
+        return {"error": "no allocation time remains for cancellation", "cleanup": cleanup}
+    receipt = {"rid": record["rid"], "sent_time_ns": time.time_ns(),
+               "observed_count": record.get("count", 0), "cleanup": cleanup}
+    request = urllib.request.Request(url.rstrip("/") + "/abort_request",
+                                     json.dumps({"rid": record["rid"], "abort_all": False}).encode(),
+                                     {"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(request, timeout=min(10, remaining)) as response:
+            receipt.update(status=response.status, body=response.read(1024 * 1024).decode())
+    except Exception as error:
+        receipt["error"] = f"{type(error).__name__}: {error}"
+    receipt["response_time_ns"] = time.time_ns()
+    return receipt
+
+
