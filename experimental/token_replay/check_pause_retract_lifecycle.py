@@ -102,3 +102,20 @@ def run_pause_l1(spec_path: Path, url: str, observer_prefix: Path, output: Path)
         with (output / "receipt.json").open("x") as stream:
             json.dump(receipt, stream, indent=2)
     return receipt
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--spec", type=Path, required=True)
+    parser.add_argument("--url", required=True)
+    parser.add_argument("--observer-prefix", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    result = run_pause_l1(args.spec, args.url, args.observer_prefix, args.output)
+    print(json.dumps({key: value for key, value in result.items() if key != "chain"}, indent=2))
+    if result["status"] != "PASS":
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()
