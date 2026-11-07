@@ -106,3 +106,33 @@ def build_spec(rows: list[dict], identity: dict) -> dict:
     return spec
 
 
+def validate_packet(packet: dict, rid: str, expected: list[int] | None, last_count: int) -> dict:
+    meta = packet.get("meta_info", {})
+    if meta.get("id") != rid:
+        raise ValueError("stream request-ID mismatch")
+    ids, count = packet.get("output_ids"), meta.get("completion_tokens")
+    if not isinstance(ids, list) or any(type(x) is not int or x < 0 for x in ids):
+        raise ValueError("stream output_ids must be nonnegative integers")
+    if type(count) is not int or count < last_count:
+        raise ValueError("stream completion count moved backwards")
+    reason = meta.get("finish_reason")
+    abort = isinstance(reason, dict) and reason.get("type") == "abort"
+    if expected is not None and count > len(expected):
+        raise ValueError("stream exceeded the fixed output budget")
+    if abort:
+        if expected is not None:
+            allowed = [expected[:count]]
+            if count:
+                allowed.append(expected[count - 1:count])
+            if ids not in allowed:
+                raise ValueError("abort IDs disagree with its retained prefix count")
+    else:
+        if len(ids) != count:
+            raise ValueError("normal streaming packets must contain cumulative output IDs")
+        if expected is not None and ids != expected[:count]:
+            raise ValueError("stream output prefix mismatch")
+        if reason is not None and expected is not None and (ids != expected or reason.get("type") != "length"):
+            raise ValueError("successful stream did not finish with the complete expected vector")
+    return {"count": count, "terminal": reason is not None, "abort": abort}
+
+
