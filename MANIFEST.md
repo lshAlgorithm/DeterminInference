@@ -38,3 +38,14 @@
 | 2026-11-07T10:14:57+08:00 | /research-refine-pipeline | refine-logs/round-1-interface-addendum.md | implementation | Final source-grounded lifecycle refinement and full proposal |
 | 2026-11-07T10:14:57+08:00 | /research-refine-pipeline | refine-logs/REFINE_STATE_20261107_101457.json | implementation | Integrated planning package ready for independent re-review |
 | 2026-11-07T10:14:57+08:00 | /research-refine-pipeline | refine-logs/REFINE_STATE.json | implementation | Integrated planning package ready for independent re-review |
+| 2026-11-07T10:16:42+08:00 | /research-refine-pipeline | refine-logs/REVIEW_AVAILABILITY_20261107_101642.md | implementation | Explicit missing Claude review capability and instruction provenance |
+| 2026-11-07T10:16:42+08:00 | /research-refine-pipeline | refine-logs/REVIEW_AVAILABILITY.md | implementation | Explicit missing Claude review capability and instruction provenance |
+| 2026-11-07T10:18:41+08:00 | /research-refine-pipeline | refine-logs/EXPERIMENT_PLAN_20261107_101841.md | implementation | Correct streaming abort receipt validation after independent source review |
+| 2026-11-07T10:18:41+08:00 | /research-refine-pipeline | refine-logs/EXPERIMENT_PLAN.md | implementation | Correct streaming abort receipt validation after independent source review |
+| 2026-11-07T10:18:41+08:00 | /research-refine-pipeline | refine-logs/FINAL_PROPOSAL_20261107_101841.md | implementation | Align abort semantics and incomplete versus inconclusive states |
+| 2026-11-07T10:18:41+08:00 | /research-refine-pipeline | refine-logs/FINAL_PROPOSAL.md | implementation | Align abort semantics and incomplete versus inconclusive states |
+| 2026-11-07T10:18:41+08:00 | /research-refine-pipeline | refine-logs/B1_INTERFACE_NOTES_20261107_101841.md | implementation | Record pinned streaming-abort packet exception and archive identity |
+| 2026-11-07T10:18:41+08:00 | /research-refine-pipeline | refine-logs/B1_INTERFACE_NOTES.md | implementation | Record pinned streaming-abort packet exception and archive identity |
+| 2026-11-07T10:18:41+08:00 | /research-refine-pipeline | refine-logs/round-2-refinement.md | implementation | Correct streaming abort protocol and status vocabulary with full revised proposal |
+| 2026-11-07T10:18:41+08:00 | /research-refine-pipeline | refine-logs/REFINE_STATE_20261107_101841.json | implementation | Round 2 correction checkpoint |
+| 2026-11-07T10:18:41+08:00 | /research-refine-pipeline | refine-logs/REFINE_STATE.json | implementation | Round 2 correction checkpoint |
