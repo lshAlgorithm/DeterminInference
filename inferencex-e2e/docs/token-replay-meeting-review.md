@@ -461,3 +461,17 @@ The local archive SHA-256 is
 `0204815e7ff0a624115316f4bb38cfb4237c9444a1444c8b32a539059e0d481f`,
 matching gpu6. GPU0 was released after the study. This follow-up does not upgrade
 the Codex-only review to cross-family acceptance.
+
+A separate controlled L1 check then used SGLang's documented
+`/pause_generation` `mode="retract"` and `/continue_generation` path. The
+non-speculative scheduler retracts the shortest current output first, explaining
+why the earlier driver did not select its longest request despite many test
+triggers. In an isolated no-CUDA-graph service, a selected 641-token request was
+paused after eight observed tokens. Its own `reset_for_retract`, resumed extend,
+decode, and length finish events formed a complete chain; all 641 wire output
+IDs exactly matched the frozen response. The first two attempts and the unique-ID
+passing attempt are retained in
+[`lifecycle-pause-20261107-raw.tar.gz`](../../experimental/token_replay/evidence/lifecycle-pause-20261107-raw.tar.gz).
+This establishes **controlled L1 correctness**, while natural KV-pressure L1
+coverage and CUDA-graph startup cause remain unresolved. No performance or
+cross-family review claim follows from this check.
