@@ -205,3 +205,110 @@ def validate_request_events(record: dict, events: list[dict]) -> dict:
     return {"relevant": relevant, "terminal": terminal, "chain": chain}
 
 
+def validate_lifecycle(receipt: dict, events: list[dict]) -> dict:
+    result = {case: {"status": "UNCOVERED", "evidence": [], "errors": []} for case in ("L1", "L2", "L3")}
+    records = receipt.get("requests", [])
+    by_rid = {r["rid"]: r for r in records}
+    if len(by_rid) != len(records):
+        raise ValueError("duplicate request IDs in receipt")
+    if any(a.startswith(b) for a in by_rid for b in by_rid if a != b):
+        raise ValueError("request IDs must not prefix-match each other")
+    checks = {}
+    for record in records:
+        case = "L3" if record["role"].startswith(("cancel", "after_cancel", "fresh")) else "L2"
+        try:
+            if record.get("error"):
+                raise ValueError(record["error"])
+            count, terminal = 0, None
+            for wire in record.get("packets", []):
+                if terminal is not None:
+                    raise ValueError("packet after terminal response")
+                state = validate_packet(wire["packet"], record["rid"], record["expected"], count)
+                count = state["count"]
+                if state["terminal"]:
+                    terminal = state
+            if terminal is None:
+                result[case]["errors"].append(f"no terminal response: {record['rid']}")
+                continue
+            checks[record["rid"]] = validate_request_events(record, events)
+            if record["role"] != "cancel" and terminal["abort"]:
+                raise ValueError("unexpected abort of a noncancelled request")
+            if record["role"] == "cancel" and terminal["abort"]:
+                backend = checks[record["rid"]]["terminal"]
+                aborted = [(e, s) for e, s, reason in backend if reason.get("type") == "abort"]
+                if aborted:
+                    if any(snap["output_len"] != count for _, snap in aborted):
+                        raise ValueError("abort receipt disagrees with backend retained count")
+                record["validated_abort_count"] = count
+        except (ValueError, KeyError, TypeError) as error:
+            result[case]["status"] = "FAIL"
+            result[case]["errors"].append(f"{record['rid']}: {error}")
+            if record["role"] == "long":
+                result["L1"]["status"] = "FAIL"
+                result["L1"]["errors"].append(str(error))
+    long = next((r for r in records if r["role"] == "long"), None)
+    if long and checks.get(long["rid"], {}).get("chain") and result["L1"]["status"] != "FAIL":
+        result["L1"] = {"status": "PASS", "evidence": checks[long["rid"]]["chain"], "errors": []}
+    filters, merges = [], []
+    for event in events:
+        if event["event"] not in ("filter_batch", "merge_batch"):
+            continue
+        before = {s["rid"]: s for s in event.get("before", [])}
+        after = {s["rid"]: s for s in event.get("after", [])}
+        other = {s["rid"]: s for s in event.get("other", [])}
+        involved = (set(before) | set(after) | set(other)) & set(by_rid)
+        if not involved:
+            continue
+        for rid in involved:
+            record = by_rid[rid]
+            for snap in (before.get(rid), after.get(rid), other.get(rid)):
+                if snap is not None and record["replay"] and (snap.get("replay_slot") is None or snap["replay_slot"]["length"] != len(record["expected"])):
+                    result["L2"]["status"] = "FAIL"
+                    result["L2"]["errors"].append(f"wrong active replay metadata mapping: {rid}")
+        if event["event"] == "filter_batch" and set(before) != set(after) and any(by_rid[r]["replay"] for r in involved):
+            filters.append([event["pid"], event["seq"]])
+        if event["event"] == "merge_batch" and other and set(after) == set(before) | set(other) and set(after) != set(before) and any(by_rid[r]["replay"] for r in involved):
+            merges.append([event["pid"], event["seq"]])
+    mix = [r for r in records if r["role"] in ("long", "short", "ordinary", "after_mix")]
+    if filters and merges and any(r["role"] == "ordinary" for r in mix) and any(r["role"] == "after_mix" for r in mix) and all(r["rid"] in checks for r in mix) and result["L2"]["status"] != "FAIL":
+        result["L2"]["status"] = "PASS"
+        result["L2"]["evidence"] = filters + merges
+    cancel = next((r for r in records if r["role"] == "cancel"), None)
+    followups = [r for r in records if r["role"] in ("after_cancel", "fresh")]
+    if cancel and "validated_abort_count" in cancel and result["L3"]["status"] != "FAIL":
+        aborts = [(e, s) for e, s, reason in checks[cancel["rid"]]["terminal"] if reason.get("type") == "abort"]
+        sent = cancel.get("abort_receipt", {})
+        active = 0 < sent.get("observed_count", 0) <= cancel["validated_abort_count"] < len(cancel["expected"])
+        retired = []
+        if aborts:
+            terminal, _ = aborts[0]
+            retired = [e for e in events if e["pid"] == terminal["pid"] and e["seq"] >= terminal["seq"] and
+                       ((e["event"] == "abort_request" and e.get("phase") == "waiting_removed" and any(s["rid"] == cancel["rid"] for s in e.get("requests", []))) or
+                        (e["event"] == "filter_batch" and any(s["rid"] == cancel["rid"] for s in e.get("before", [])) and all(s["rid"] != cancel["rid"] for s in e.get("after", []))))]
+            if retired:
+                retirement = retired[0]
+                for later in events:
+                    if later["pid"] != retirement["pid"] or later["seq"] <= retirement["seq"]:
+                        continue
+                    active_members = list(later.get("after", []))
+                    if later["event"] in {"run_batch_dispatch", "reset_for_retract", "retraction_trigger"}:
+                        active_members += later.get("requests", [])
+                    if any(s["rid"] == cancel["rid"] for s in active_members):
+                        result["L3"]["status"] = "FAIL"
+                        result["L3"]["errors"].append("cancelled request reappeared after retirement")
+                        break
+                    if later["event"] == "process_batch_result":
+                        for snap in later.get("requests", []):
+                            if snap["rid"] == cancel["rid"] and (snap.get("finished_reason") or {}).get("type") != "abort":
+                                result["L3"]["status"] = "FAIL"
+                                result["L3"]["errors"].append("post-retirement completion is not an abort")
+                                break
+        if active and sent.get("status") == 200 and aborts and retired and len(followups) == 2 and all(r["rid"] in checks for r in followups) and result["L3"]["status"] != "FAIL":
+            result["L3"]["status"] = "PASS"
+            result["L3"]["evidence"] = [[e["pid"], e["seq"]] for e in [aborts[0][0], retired[0]]]
+    for case in result.values():
+        if case["status"] == "UNCOVERED" and not case["errors"]:
+            case["errors"].append("required same-request lifecycle or completion witness absent")
+    return result
+
+
