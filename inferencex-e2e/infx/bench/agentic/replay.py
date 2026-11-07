@@ -173,6 +173,8 @@ def replay_argv(cfg: ReplayConfig, cli: str | Path) -> list[str]:
     argv = [str(cli), "profile", "--url", cfg.url]
     argv += ["--model", cfg.model, "--tokenizer", cfg.tokenizer]
     argv += ["--concurrency", str(cfg.concurrency), "--benchmark-duration", str(cfg.duration)]
+    if cfg.num_sessions is not None:
+        argv += ["--num-sessions", str(cfg.num_sessions)]
     if cfg.live_failed_request_threshold is not None:
         argv += ["--failed-request-threshold", cfg.live_failed_request_threshold]
     if cfg.warmup_requests_per_lane is not None:
