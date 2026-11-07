@@ -155,3 +155,53 @@ def read_observer_events(prefix: Path) -> list[dict]:
     return sorted(events, key=lambda e: (e["time_ns"], e["pid"], e["seq"]))
 
 
+def validate_request_events(record: dict, events: list[dict]) -> dict:
+    rid, expected, prompt = record["rid"], record["expected"], record["input_ids"]
+    relevant, terminal, resets, resumes, decodes, progress = [], [], [], [], [], []
+    for event in events:
+        for snap in event.get("requests", []):
+            if snap["rid"] != rid:
+                continue
+            relevant.append((event, snap))
+            ids, count = snap["output_ids"], snap["output_len"]
+            if count != len(ids) or ids != expected[:count] or count > len(expected):
+                raise ValueError(f"backend prefix mismatch: {rid}")
+            if "origin_input_ids" in snap and snap["origin_input_ids"] != prompt:
+                raise ValueError(f"backend original prompt mismatch: {rid}")
+            if snap.get("output_sha256") not in (None, canonical_hash(ids)):
+                raise ValueError("backend prefix hash mismatch")
+            reason = snap.get("finished_reason") or event.get("terminal_reason")
+            if reason is not None:
+                terminal.append((event, snap, reason))
+            if event["event"] == "reset_for_retract" and count:
+                resets.append((event, snap))
+            if event["event"] == "run_batch_dispatch":
+                mode = event["forward_mode"].lower()
+                if "extend" in mode and snap["retraction_count"] > 0:
+                    fill = prompt + ids
+                    cached = snap["cached_prefix_length"]
+                    if snap.get("origin_input_ids") != prompt or snap["fill_ids"] != fill or type(cached) is not int or not 0 <= cached <= len(fill):
+                        raise ValueError("resumed input must be original prompt plus retained output prefix")
+                    if snap["extend_ids"] != fill[cached:] or snap["extend_input_len"] != len(fill) - cached:
+                        raise ValueError("resumed cached prefix or actual extend suffix mismatch")
+                    resumes.append((event, snap))
+                if "decode" in mode:
+                    decodes.append((event, snap))
+            if event["event"] == "process_batch_result":
+                progress.append((event, snap))
+    chain = None
+    for reset, old in resets:
+        for resume, retained in resumes:
+            if resume["pid"] != reset["pid"] or resume["seq"] <= reset["seq"] or retained["output_ids"] != old["output_ids"]:
+                continue
+            continued = [(e, s) for e, s in progress if e["pid"] == reset["pid"] and e["seq"] > resume["seq"] and s["output_len"] > old["output_len"]]
+            later_decode = [(e, s) for e, s in decodes if e["pid"] == reset["pid"] and e["seq"] > resume["seq"] and s["output_len"] > old["output_len"]]
+            finished = [(e, s, r) for e, s, r in terminal if e["pid"] == reset["pid"] and e["seq"] > resume["seq"] and s["output_ids"] == expected and r.get("type") == "length"]
+            if continued and later_decode and finished and record.get("first_partial_count", 0) <= old["output_len"] and record.get("first_partial_count", 0) > 0:
+                chain = [[e["pid"], e["seq"]] for e in (reset, resume, continued[0][0], later_decode[0][0], finished[0][0])]
+                break
+        if chain:
+            break
+    return {"relevant": relevant, "terminal": terminal, "chain": chain}
+
+
