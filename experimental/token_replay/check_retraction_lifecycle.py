@@ -330,3 +330,36 @@ def make_request(spec: dict, concurrency: int, role: str, source_index: int,
             "packets": [], "terminal": False, "first_partial_count": 0}
 
 
+def stream_request(url: str, record: dict, messages: queue.Queue, deadline_ns: int,
+                   raw_path: Path) -> None:
+    rid = record["rid"]
+    request = urllib.request.Request(url.rstrip("/") + "/generate",
+                                     json.dumps(record["payload"]).encode(),
+                                     {"Content-Type": "application/json"})
+    try:
+        remaining = (deadline_ns - time.time_ns()) / 1e9
+        if remaining <= 0:
+            raise TimeoutError("control window expired before dispatch")
+        with raw_path.open("x") as raw, urllib.request.urlopen(request, timeout=min(10, remaining)) as response:
+            total = 0
+            for line in response:
+                timestamp = time.time_ns()
+                total += len(line)
+                if len(line) > 2 * 1024 * 1024 or total > 128 * 1024 * 1024:
+                    raise ValueError("stream exceeded bounded receipt size")
+                raw.write(json.dumps({"time_ns": timestamp, "raw": line.decode("utf-8")}) + "\n")
+                raw.flush()
+                if timestamp >= deadline_ns:
+                    raise TimeoutError("control window expired while streaming")
+                if not line.startswith(b"data:"):
+                    continue
+                data = line[5:].strip()
+                if data == b"[DONE]":
+                    break
+                packet = json.loads(data)
+                messages.put({"rid": rid, "packet": packet, "time_ns": timestamp})
+        messages.put({"rid": rid, "closed": True, "time_ns": time.time_ns()})
+    except Exception as error:
+        messages.put({"rid": rid, "error": f"{type(error).__name__}: {error}", "time_ns": time.time_ns()})
+
+
