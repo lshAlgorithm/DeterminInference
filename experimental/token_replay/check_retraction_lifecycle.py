@@ -563,3 +563,49 @@ def run_attempt(spec_path: Path, url: str, observer_prefix: Path, output: Path,
     return receipt
 
 
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    commands = parser.add_subparsers(dest="command", required=True)
+    prepare = commands.add_parser("prepare")
+    prepare.add_argument("--source-archive", type=Path, required=True)
+    prepare.add_argument("--manifest", type=Path, required=True)
+    prepare.add_argument("--reference", type=Path, required=True)
+    prepare.add_argument("--identity", type=Path, required=True)
+    prepare.add_argument("--output", type=Path, required=True)
+    run = commands.add_parser("run")
+    run.add_argument("--spec", type=Path, required=True)
+    run.add_argument("--url", required=True)
+    run.add_argument("--observer-prefix", type=Path, required=True)
+    run.add_argument("--output", type=Path, required=True)
+    run.add_argument("--concurrency", type=int, choices=(4, 8), required=True)
+    run.add_argument("--allocation-deadline-ns", type=int, required=True)
+    run.add_argument("--previous-receipt", type=Path)
+    validate = commands.add_parser("validate")
+    validate.add_argument("--receipt", type=Path, required=True)
+    validate.add_argument("--observer-prefix", type=Path, required=True)
+    args = parser.parse_args()
+    if args.command == "prepare":
+        rows = load_qualified_rows(args.source_archive, args.manifest, args.reference)
+        identity = json.loads(args.identity.read_text())
+        identity["source_archive_sha256"] = hashlib.sha256(args.source_archive.read_bytes()).hexdigest()
+        identity["source_manifest_sha256"] = hashlib.sha256(args.manifest.read_bytes()).hexdigest()
+        identity["corpus_reference_sha256"] = hashlib.sha256(args.reference.read_bytes()).hexdigest()
+        result = build_spec(rows, identity)
+        with args.output.open("x") as stream:
+            json.dump(result, stream, indent=2)
+        print(json.dumps({"spec_sha256": result["spec_sha256"], "selected": [{"file": row["source_file"], "row": row["source_row"], "length": row["expected_length"]} for row in result["selected"]]}, indent=2))
+    elif args.command == "run":
+        result = run_attempt(args.spec, args.url, args.observer_prefix, args.output,
+                             args.concurrency, args.allocation_deadline_ns, args.previous_receipt)
+        print(json.dumps({"cases": result["cases"], "failure": result["failure"]}, indent=2))
+        if result["failure"] or any(c["status"] != "PASS" for c in result["cases"].values()):
+            raise SystemExit(1)
+    else:
+        result = validate_lifecycle(json.loads(args.receipt.read_text()), read_observer_events(args.observer_prefix))
+        print(json.dumps(result, indent=2))
+        if any(c["status"] != "PASS" for c in result.values()):
+            raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()
