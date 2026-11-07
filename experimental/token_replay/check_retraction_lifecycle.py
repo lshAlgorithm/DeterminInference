@@ -414,3 +414,12 @@ def abort_owned_request(url: str, record: dict, deadline_ns: int, cleanup: bool 
     return receipt
 
 
+def cancellation_retired(record: dict, events: list[dict]) -> bool:
+    for event in events:
+        if event["event"] == "abort_request" and event.get("phase") == "waiting_removed" and any(s["rid"] == record["rid"] for s in event.get("requests", [])):
+            return True
+        if event["event"] == "filter_batch" and any(s["rid"] == record["rid"] and (s.get("finished_reason") or {}).get("type") == "abort" for s in event.get("before", [])) and all(s["rid"] != record["rid"] for s in event.get("after", [])):
+            return True
+    return False
+
+
