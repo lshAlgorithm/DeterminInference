@@ -363,3 +363,34 @@ def stream_request(url: str, record: dict, messages: queue.Queue, deadline_ns: i
         messages.put({"rid": rid, "error": f"{type(error).__name__}: {error}", "time_ns": time.time_ns()})
 
 
+def receive_message(messages: queue.Queue, records: dict[str, dict], deadline_ns: int) -> None:
+    remaining = (deadline_ns - time.time_ns()) / 1e9
+    if remaining <= 0:
+        raise TimeoutError("bounded lifecycle control window expired")
+    try:
+        message = messages.get(timeout=min(remaining, 0.25))
+    except queue.Empty:
+        return
+    record = records[message["rid"]]
+    if "error" in message:
+        record["error"] = message["error"]
+        record["closed"] = True
+        raise RuntimeError(message["error"])
+    if message.get("closed"):
+        record["closed"] = True
+        if not record["terminal"]:
+            raise RuntimeError("generate stream closed without a terminal receipt")
+        return
+    record["packets"].append({"time_ns": message["time_ns"], "packet": message["packet"]})
+    if record["terminal"]:
+        raise ValueError("stream emitted a packet after its terminal receipt")
+    state = validate_packet(message["packet"], record["rid"], record["expected"], record.get("count", 0))
+    record["count"], record["terminal"] = state["count"], state["terminal"]
+    if state["count"] and not state["terminal"] and not record["first_partial_count"]:
+        record["first_partial_count"] = state["count"]
+        record["first_partial_time_ns"] = message["time_ns"]
+    if state["terminal"]:
+        record["terminal_time_ns"] = message["time_ns"]
+        record["aborted"] = state["abort"]
+
+
