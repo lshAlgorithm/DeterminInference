@@ -1,0 +1,13 @@
+{
+  "phase": "anchor",
+  "round": 0,
+  "threadId": null,
+  "last_score": null,
+  "last_verdict": null,
+  "status": "in_progress",
+  "target": "engineering PR / technical report",
+  "language": "en per repository AGENTS.md",
+  "timestamp": "2026-11-07T10:03:51.452622+08:00",
+  "claude_review": "unavailable in callable tool registry",
+  "calibration": "none"
+}

@@ -1,0 +1,7 @@
+# Problem Anchor
+
+- Bottom-line problem: Provide an opt-in, reproducible recorded-token path for the existing InferenceX AgentX benchmark, so later recorded prompts can reuse cache corresponding to recorded response tokens while the engine still performs normal forward and sampling.
+- Must-solve bottleneck: Response-only replay can return or insert recorded text while the server has computed a different token trajectory; the extension must carry exact token IDs through the supported scheduler, cache-isolation and request lifecycle without silently changing the default benchmark.
+- Non-goals: A new determinism algorithm, bitwise equality of floating-point KV tensors across batches, universal speedup, removal of snapshot warmup, reconstruction of original content from hashes, model training, or a top-venue novelty claim.
+- Constraints: Engineering PR and technical report first. Reuse this repository's qualified Exgentic/Weka sources, existing Dense/MoE checkpoints and pinned AgentX 1.0.13/SGLang 0.5.10. Seed42; function-scoped code commits; raw execution evidence in Git LFS. Future GPU work requires a fresh resource guard and isolated outputs; GPU1 is outside scope. This pipeline plans follow-up work and does not launch it.
+- Success condition: A maintainer can inspect the opt-in API, inherited versus added behavior, exact-ID/lifecycle coverage, declared overhead boundary, default-route regression evidence, reproducible artifacts and honest limitations; each remaining claim has a small falsifiable test and a stopping rule.
