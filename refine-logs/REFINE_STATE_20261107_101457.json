@@ -1,0 +1,15 @@
+{
+  "phase": "review",
+  "round": 2,
+  "threadId": null,
+  "last_score": 7.65,
+  "last_verdict": "REVISE",
+  "status": "in_progress",
+  "target": "engineering PR / technical report",
+  "timestamp": "2026-11-07T10:14:57.062098+08:00",
+  "claude_review": "unavailable",
+  "calibration": "none",
+  "acceptance_status": "provisional",
+  "gpu_jobs_launched": 0,
+  "pending_review": "integrated proposal and plan"
+}

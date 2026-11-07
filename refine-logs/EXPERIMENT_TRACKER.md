@@ -1,0 +1,22 @@
+# Experiment Tracker
+
+Date: 2026-11-07. This pipeline performed planning and document checks only; GPU jobs launched: **0**. COMPLETE below refers to existing B0 evidence, not new execution.
+
+| Run ID | Milestone | Purpose | System / data | Decisive metrics | Priority | Status | Evidence / next gate |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| B0-entry | M0 | Original path and supported C1 | Pinned AgentX/SGLang synthetic DAG fixture | 240 wire/payload/output sequences; salts, joins, reset, phase handoff | Reuse | COMPLETE | Meeting report and entry archive; no natural-content performance claim |
+| B0-reference | M0 | Real-content exact-ID witness | Corrected Dense Exgentic | 447/447 full returned ID sequences | Reuse | COMPLETE | Independent from-start reference; not every performance invocation |
+| B0-dense | M0 | Main workload result/deletion control | 36 frozen generated/recorded cells | 25,755 profile + 1,716 warmup; complete denominators/cache/throughput | Reuse | COMPLETE | Dense report; not isolated replacement cost |
+| B0-http | M0 | Scoped C2 | Fixed 32 greedy prompts; c1/4/8 | Matched IDs/work; adjusted upper bound <1%; zero retractions | Reuse | COMPLETE | dense-overhead-02.json; HTTP scope only |
+| B0-phase | M0 | Warmup boundary/cost | 37 Dense/public runs | HTTP warmup drain precedes profiling | Reuse | COMPLETE | Does not prove GPU-event non-overlap or free warmup |
+| B0-moe | M0 | Bounded supporting report | 308 real/synthetic requests; TP2/EP2 | Routing differs; throughput interval spans zero | Reuse | COMPLETE | Rank timings only 9/308; no new MoE study |
+| B1-prepare | M1 | Implement real lifecycle cases and freeze trigger | Existing lifecycle harness plus targeted functions | Source IDs, expected outputs, observed-event schema, limits | MUST before B1 GPU | TODO | Choose/freeze exact controls; function-level commits and focused review |
+| B1-L1 | M2 | Same-request retraction/resume | One fixed complete replay request in bounded mixed batch | Retraction, resume position, exact continuous output | Recommended pre-merge | TODO | <=2 declared attempts within shared 0.5 GPU-hour budget; absence=UNCOVERED |
+| B1-L2 | M2 | Filter/merge and state retirement | Unequal lengths and ordinary/replay mixture | Actual events; output equality; ordinary follow-up | Recommended pre-merge | TODO | Reuse completed mixed fixture, add only missing actual event witness |
+| B1-L3 | M2 | Cancellation cleanup | In-flight replay abort then ordinary/fresh replay | Backend abort before finish; no resumed cancelled request or state leakage | Recommended pre-merge | TODO | Client disconnect is insufficient; same shared B1 budget |
+| B2-cpu | M3 | Finite-cohort/observation gate | Four loaded sessions, four profile root admissions, snapshot/warmup | Tail drains; no fifth root; complete occurrence mapping | Conditional | DEFERRED | Only if instrumented AgentX C2 extension is needed; source change reviewed |
+| B2-reference | M4 | Single immutable capture and calibration | Same cohort, c1, symmetric exact-output events | Per-row consistency; warmup prefix; full observable IDs | Conditional | DEFERRED | Cannot recapture until pass; budget includes capture/calibration |
+| B2-pairs | M4 | Instrumented AgentX cost | Same cohort and work, c1 | 3/5 paired adjusted intervals; all IDs/work match | Conditional | DEFERRED | <=1.5 GPU-hours all-inclusive; failed matches remain evidence |
+| Review-Claude | M5 | Independent cross-family review | Same frozen planning package as Codex | Full raw independent review and disposition | Review gap | UNAVAILABLE | No callable claude-review tool; no dual-review acceptance |
+
+All future outcomes use PASS / FAIL / UNCOVERED / INCOMPLETE / INCONCLUSIVE as defined in [EXPERIMENT_PLAN.md](EXPERIMENT_PLAN.md). No row may become COMPLETE merely because a command exits zero. Source or protocol changes require a new freeze and targeted review. The inherited source commits and evidence links are in [GROUNDING.md](GROUNDING.md).

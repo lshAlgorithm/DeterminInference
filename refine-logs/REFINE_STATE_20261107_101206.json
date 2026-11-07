@@ -1,0 +1,14 @@
+{
+  "phase": "review",
+  "round": 1,
+  "threadId": null,
+  "last_score": 7.65,
+  "last_verdict": "REVISE",
+  "status": "in_progress",
+  "target": "engineering PR / technical report",
+  "timestamp": "2026-11-07T10:12:06.997468+08:00",
+  "claude_review": "unavailable",
+  "calibration": "none",
+  "acceptance_status": "provisional",
+  "gpu_jobs_launched": 0
+}
