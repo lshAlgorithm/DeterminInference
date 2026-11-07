@@ -438,3 +438,26 @@ study and a local PR draft. GPU0/2/3 are released, all experiment stages complet
 and raw evidence is retained in Git LFS with verified archive hashes. A maintainer
 can review the interfaces and evidence without treating these local runs as an
 official InferenceX score or upstream acceptance.
+
+## Lifecycle follow-up, 2026-11-07
+
+An isolated SGLang copy on gpu6 added opt-in lifecycle observation for selected
+request IDs. A seed-42, eight-request qualification from the frozen Dense corpus
+passed all 447 source/reference checks. The first server startup stalled during
+CUDA graph capture and never became healthy; its log is retained. A correctness
+run with CUDA graph disabled became healthy and executed the frozen c4 window and
+its single permitted c8 escalation. This configuration change has no performance
+interpretation.
+
+Both windows completed without driver errors. Mixed replay/ordinary filtering
+and merging (L2) passed, as did active cancellation, backend abort, batch
+retirement and post-cancel ordinary/replay followups (L3). The same longest
+request never had a reset-and-resume chain, so L1 remains **UNCOVERED**. Test
+retraction triggers and resets of other requests do not satisfy that check.
+The original receipts, corrected read-only validation, wire records, observer
+events, server logs and both frozen specs are in
+[`lifecycle-20261107-raw.tar.gz`](../../experimental/token_replay/evidence/lifecycle-20261107-raw.tar.gz).
+The local archive SHA-256 is
+`0204815e7ff0a624115316f4bb38cfb4237c9444a1444c8b32a539059e0d481f`,
+matching gpu6. GPU0 was released after the study. This follow-up does not upgrade
+the Codex-only review to cross-family acceptance.
