@@ -423,3 +423,18 @@ def cancellation_retired(record: dict, events: list[dict]) -> bool:
     return False
 
 
+def launch_request(url: str, record: dict, records: dict[str, dict], messages: queue.Queue,
+                   deadline_ns: int, output: Path) -> threading.Thread:
+    if record["rid"] in records:
+        raise ValueError("request ID reuse is forbidden")
+    records[record["rid"]] = record
+    record["dispatch_time_ns"] = time.time_ns()
+    with (output / (record["rid"] + ".request.json")).open("x") as stream:
+        json.dump(record["payload"], stream)
+    thread = threading.Thread(target=stream_request,
+                              args=(url, record, messages, deadline_ns, output / (record["rid"] + ".wire.jsonl")),
+                              daemon=True)
+    thread.start()
+    return thread
+
+
