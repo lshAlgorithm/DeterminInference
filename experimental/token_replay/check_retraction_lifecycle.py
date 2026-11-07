@@ -438,3 +438,128 @@ def launch_request(url: str, record: dict, records: dict[str, dict], messages: q
     return thread
 
 
+def run_attempt(spec_path: Path, url: str, observer_prefix: Path, output: Path,
+                concurrency: int, allocation_deadline_ns: int, previous_path: Path | None) -> dict:
+    spec = json.loads(spec_path.read_text())
+    digest = spec.pop("spec_sha256")
+    if canonical_hash(spec) != digest:
+        raise ValueError("specification hash mismatch")
+    spec["spec_sha256"] = digest
+    if spec["driver_sha256"] != hashlib.sha256(Path(__file__).read_bytes()).hexdigest():
+        raise ValueError("driver changed after specification freeze")
+    if concurrency not in (4, 8) or spec["attempts"] != [4, 8]:
+        raise ValueError("only the frozen c4 attempt and single c8 escalation are permitted")
+    previous = None
+    if concurrency == 8:
+        if previous_path is None:
+            raise ValueError("c8 requires the completed c4 receipt")
+        previous = json.loads(previous_path.read_text())
+        statuses = [case["status"] for case in previous["cases"].values()]
+        if previous["spec_sha256"] != digest or previous["concurrency"] != 4 or "FAIL" in statuses or "UNCOVERED" not in statuses or previous.get("failure"):
+            raise ValueError("escalation is allowed only after event absence in the same c4 freeze")
+    start = time.time_ns()
+    if not 30e9 < allocation_deadline_ns - start <= 1800e9:
+        raise ValueError("allocation deadline must leave cleanup time within the 1800-second ceiling")
+    deadline = min(start + int(spec["attempt_seconds"] * 1e9), allocation_deadline_ns - int(spec["cleanup_seconds"] * 1e9))
+    output.mkdir(parents=True, exist_ok=False)
+    claim_path = spec_path.with_name(spec_path.name + f".c{concurrency}.claim.json")
+    with claim_path.open("x") as stream:
+        json.dump({"spec_sha256": digest, "output": str(output.resolve()), "start_time_ns": start}, stream)
+    (output / "spec.json").write_text(json.dumps(spec, indent=2) + "\n")
+    records, messages, threads = {}, queue.Queue(), []
+    receipt = {"schema_version": 1, "spec_sha256": digest, "concurrency": concurrency,
+               "start_time_ns": start, "attempt_deadline_ns": deadline,
+               "allocation_deadline_ns": allocation_deadline_ns, "requests": [],
+               "observer_prefix": str(observer_prefix), "cleanup": [], "failure": None}
+    if previous_path is not None:
+        receipt["previous_sha256"] = hashlib.sha256(previous_path.read_bytes()).hexdigest()
+    ordinary_index = spec["ordinary_source_index"]
+    order = sorted(range(concurrency), key=lambda i: spec["selected"][i]["expected_length"], reverse=True)
+    receipt["roles"] = {"long": order[0], "short": order[1:-1], "cancel": order[-1], "ordinary": ordinary_index}
+    (output / "dispatch-plan.json").write_text(json.dumps(receipt, indent=2) + "\n")
+    try:
+        if previous is None:
+            reference = make_request(spec, concurrency, "reference", ordinary_index, False)
+            threads.append(launch_request(url, reference, records, messages, deadline, output))
+            while not reference["terminal"]:
+                receive_message(messages, records, deadline)
+            if reference.get("aborted") or reference["count"] != spec["selected"][ordinary_index]["expected_length"]:
+                raise ValueError("ordinary reference did not complete its full fixed source budget")
+            ordinary = reference["packets"][-1]["packet"]["output_ids"]
+            reference["expected"] = ordinary
+        else:
+            ordinary = previous["ordinary_reference_ids"]
+        receipt["ordinary_reference_ids"] = ordinary
+        receipt["ordinary_reference_sha256"] = canonical_hash(ordinary)
+        (output / "ordinary-reference.json").write_text(json.dumps({"ids": ordinary, "sha256": canonical_hash(ordinary), "reused": previous is not None}) + "\n")
+        long = make_request(spec, concurrency, "long", order[0], True)
+        threads.append(launch_request(url, long, records, messages, deadline, output))
+        while not long["first_partial_count"] and not long["terminal"]:
+            receive_message(messages, records, deadline)
+        if long["terminal"]:
+            receipt["uncovered_reason"] = "long request finished before nonterminal progress was observed"
+        else:
+            for source_index in order[1:-1]:
+                short = make_request(spec, concurrency, "short", source_index, True)
+                threads.append(launch_request(url, short, records, messages, deadline, output))
+            mixed = make_request(spec, concurrency, "ordinary", ordinary_index, False, ordinary)
+            threads.append(launch_request(url, mixed, records, messages, deadline, output))
+        while any(not r["terminal"] for r in records.values()):
+            receive_message(messages, records, deadline)
+        after_mix = make_request(spec, concurrency, "after_mix", ordinary_index, False, ordinary)
+        threads.append(launch_request(url, after_mix, records, messages, deadline, output))
+        while not after_mix["terminal"]:
+            receive_message(messages, records, deadline)
+        cancel = make_request(spec, concurrency, "cancel", order[-1], True)
+        threads.append(launch_request(url, cancel, records, messages, deadline, output))
+        while not cancel["first_partial_count"] and not cancel["terminal"]:
+            receive_message(messages, records, deadline)
+        if not cancel["terminal"]:
+            cancel["abort_receipt"] = abort_owned_request(url, cancel, deadline)
+            if "error" in cancel["abort_receipt"]:
+                raise RuntimeError(cancel["abort_receipt"]["error"])
+        while not cancel["terminal"]:
+            receive_message(messages, records, deadline)
+        while cancel.get("aborted") and not cancellation_retired(cancel, read_observer_events(observer_prefix)):
+            receive_message(messages, records, deadline)
+        for role, source_index, replay in (("after_cancel", ordinary_index, False), ("fresh", order[-1], True)):
+            followup = make_request(spec, concurrency, role, source_index, replay, ordinary)
+            threads.append(launch_request(url, followup, records, messages, deadline, output))
+            while not followup["terminal"]:
+                receive_message(messages, records, deadline)
+        while any(not r.get("closed") for r in records.values()):
+            receive_message(messages, records, deadline)
+    except Exception as error:
+        receipt["failure"] = f"{type(error).__name__}: {error}"
+    finally:
+        cleanup_deadline = min(allocation_deadline_ns, time.time_ns() + int(spec["cleanup_seconds"] * 1e9))
+        for record in records.values():
+            if not record["terminal"]:
+                receipt["cleanup"].append(abort_owned_request(url, record, cleanup_deadline, cleanup=True))
+        while any(not r.get("closed") for r in records.values()) and time.time_ns() < cleanup_deadline:
+            try:
+                receive_message(messages, records, cleanup_deadline)
+            except Exception as error:
+                receipt["cleanup"].append({"error": str(error)})
+        for thread in threads:
+            thread.join(timeout=0)
+        receipt["requests"] = list(records.values())
+        receipt["finish_time_ns"] = time.time_ns()
+        try:
+            events = read_observer_events(observer_prefix)
+            with (output / "observer-events.jsonl").open("x") as stream:
+                for event in events:
+                    stream.write(json.dumps(event) + "\n")
+            receipt["cases"] = validate_lifecycle(receipt, events)
+        except Exception as error:
+            receipt["failure"] = (receipt["failure"] or "") + f"; observer validation: {error}"
+            receipt["cases"] = {case: {"status": "FAIL", "errors": [str(error)], "evidence": []} for case in ("L1", "L2", "L3")}
+        if receipt["failure"] and not receipt["failure"].startswith("TimeoutError"):
+            for case in receipt["cases"].values():
+                case["status"] = "FAIL"
+                case["errors"].append(receipt["failure"])
+        with (output / "receipt.json").open("x") as stream:
+            json.dump(receipt, stream, indent=2)
+    return receipt
+
+
