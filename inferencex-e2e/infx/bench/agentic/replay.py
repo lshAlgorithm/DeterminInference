@@ -54,6 +54,7 @@ class ReplayConfig:
     benchmark_grace_period: str | None
 
     token_trace: Path | None = None
+    num_sessions: int | None = None
 
     @classmethod
     def from_env(cls, env: Mapping[str, str], result_dir: Path) -> ReplayConfig:
@@ -74,6 +75,17 @@ class ReplayConfig:
         )
         token_trace = inputs.optional("AGENTX_TOKEN_TRACE", env)
         mode = inputs.optional("AGENTX_REPLAY_MODE", env)
+        num_sessions = inputs.optional("AGENTX_NUM_SESSIONS", env)
+        if num_sessions and not token_trace:
+            raise inputs.InputError("AGENTX_NUM_SESSIONS requires a local token experiment")
+        concurrency = inputs.parse_positive_int("CONC", values["CONC"])
+        session_limit = (
+            inputs.parse_positive_int("AGENTX_NUM_SESSIONS", num_sessions)
+            if num_sessions is not None
+            else None
+        )
+        if session_limit is not None and session_limit < concurrency:
+            raise inputs.InputError("AGENTX_NUM_SESSIONS must be at least CONC")
         if token_trace or mode:
             if not token_trace or mode not in {"generated", "recorded"}:
                 raise inputs.InputError(
@@ -91,7 +103,7 @@ class ReplayConfig:
             url=server_url(env),
             model=inputs.optional("SERVED_MODEL_NAME", env) or values["MODEL"],
             tokenizer=inputs.optional("TOKENIZER", env) or values["MODEL"],
-            concurrency=inputs.parse_positive_int("CONC", values["CONC"]),
+            concurrency=concurrency,
             duration=duration,
             warmup_requests_per_lane=warmup,
             live_failed_request_threshold=inputs.optional(
@@ -115,6 +127,7 @@ class ReplayConfig:
             apply_chat_template=env.get("AIPERF_APPLY_CHAT_TEMPLATE") == "true",
             benchmark_grace_period=inputs.optional("AIPERF_BENCHMARK_GRACE_PERIOD", env),
             token_trace=Path(token_trace).absolute() if token_trace else None,
+            num_sessions=session_limit,
         )
 
 
