@@ -1,6 +1,6 @@
 # Experiment Tracker
 
-Date: 2026-11-07. This pipeline performed planning and document checks only; GPU jobs launched: **0**. COMPLETE below refers to existing B0 evidence, not new execution.
+Date: 2026-11-08. This pipeline performed planning and document checks only; GPU jobs launched: **0**. COMPLETE below refers to existing B0 evidence, not new execution. Default review is Codex-only provisional; Shen Yue is not required unless explicitly requested.
 
 | Run ID | Milestone | Purpose | System / data | Decisive metrics | Priority | Status | Evidence / next gate |
 | --- | --- | --- | --- | --- | --- | --- | --- |

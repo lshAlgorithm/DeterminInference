@@ -1,8 +1,10 @@
 # Review Availability Receipt
 
-Date: 2026-11-07. Task: engineering refinement and focused experiment planning.
+Date: 2026-11-08. Task: engineering refinement and focused experiment planning.
 
-The user requires independent fresh Codex and Claude reviews of the same frozen artifact. The invoked [research-refine skill](/Users/marsdon.mac/.codex/skills/research-refine/SKILL.md), Phase 2, instructs: "Send the full proposal to Claude for an **elegance-first, frontier-aware, method-first** review." Its key rules also require: "Always ask the Claude reviewer for strict, high-rigor feedback in every review round."
+Current project default: Codex review is sufficient for local engineering progress. Shen Yue is not a default reviewer or execution dependency; include that person only when the user explicitly requests it.
+
+The earlier research-refine workflow requested an independent Claude review of the same frozen artifact. That historical requirement is retained as provenance, but it is not a current execution blocker.
 
 The session tool registry was inspected for claude-review and discovery tools. No callable claude-review or tool-search provider is available. Therefore no Claude request/job/thread/model/response exists, and no cross-family review is claimed. This is a missing reviewer capability, not an automatic approval rejection and not a request for user permission.
 

@@ -427,7 +427,7 @@ provisional review, not dual-review acceptance.
 | Public hash-only traces | Original true replies cannot be recovered. Public reference stays separate; target-tokenized Exgentic content and explicit synthetic controls carry the content tests. |
 | MoE and multiple GPUs | Full308-request real/synthetic service and both-rank routing coverage, fixed TP2/EP2 placement and EPLB off, representative9-request rank timing and paired recorder-cost controls. Whole-workload rank timing is not established. |
 | Reproducibility and delivery | Seed42, source/model hashes, function-scoped commits, two dependency patches, Git LFS logs, complete tables, commands and a local bilingual PR draft. No upstream publication or maintainer acceptance is implied. |
-| Review | Deterministic delivery checks and final independent Codex review/re-review complete without blocking findings. Codex positives remain provisional; Claude-review is unavailable. |
+| Review | Deterministic delivery checks and final independent Codex review/re-review complete without blocking findings. Codex review is provisional because Claude-review is unavailable; this is not dual-review acceptance. Shen Yue is not a default review dependency. |
 
 The measurements support reproducible trajectory replay as a benchmark-fidelity
 improvement. They do not establish general engine acceleration, a full removal

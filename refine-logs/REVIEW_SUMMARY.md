@@ -1,6 +1,6 @@
 # Review Summary
 
-Date: 2026-11-07. Target: engineering PR and technical report. Rounds: 3. Final planning verdict: **READY**, score **9.15/10**, **Codex-only provisional**. Claude review is unavailable; dual review remains incomplete. The verdict concerns the plan, not completed B1/B2 or maintainer approval.
+Date: 2026-11-08. Target: engineering PR and technical report. Rounds: 3. Final planning verdict: **READY**, score **9.15/10**, **Codex-only provisional**. Claude review is unavailable; this is not dual-review acceptance. Shen Yue is not required by default.
 
 ## Problem Anchor
 

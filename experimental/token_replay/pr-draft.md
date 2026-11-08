@@ -39,8 +39,9 @@ MoE routing coverage, nine-request dual-rank diagnostics and three paired record
 controls completed; recorder service overhead is about21%, so content-performance
 claims use recorder-off measurements. The acceptance fixture is synthetic and is not an original Weka score;
 Exgentic content is re-tokenized for the target model, with processed timing and
-no invented DAG. The available review is Codex-only: Claude-review was unavailable.
-No completed cross-family review or general performance improvement is claimed.
+no invented DAG. The available review is Codex-only provisional: Claude-review was unavailable.
+This is not dual-review acceptance. Shen Yue is not a default review dependency.
+No general performance improvement is claimed.
 The [final independent review](evidence/final-review-20261107.json) reconstructed
 the raw Dense results and verified the scoped analysis fix without blocking findings.
 
