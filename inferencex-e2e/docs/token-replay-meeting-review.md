@@ -434,8 +434,9 @@ improvement. They do not establish general engine acceleration, a full removal
 of warmup, or a causal MoE routing-to-GPU-time mechanism.
 
 The deliverable is an opt-in replay implementation with a bounded benchmark
-study and a local PR draft. GPU0/2/3 are released, all experiment stages completed,
-and raw evidence is retained in Git LFS with verified archive hashes. A maintainer
+study and a local PR draft. GPU0/2/3 are released, all declared B0 and lifecycle
+attempts completed with their uncovered boundaries recorded, and raw evidence is
+retained in Git LFS with verified archive hashes. A maintainer
 can review the interfaces and evidence without treating these local runs as an
 official InferenceX score or upstream acceptance.
 
