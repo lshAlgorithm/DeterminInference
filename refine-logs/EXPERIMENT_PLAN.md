@@ -143,3 +143,22 @@ No new GPU work occurred during M0/planning. Mandatory future allocation is capp
 - Independent Codex and Claude review the same freeze without exchanging conclusions. Claude is unavailable in this session; review acceptance remains provisional, not dual-approved.
 
 Planning checklist: the main table and deletion control are covered by B0; simplicity is defended without building an unnecessary alternative; frontier novelty is explicitly absent; pending B1 and deferred B2 are separate. Empirical completion checkboxes belong in the tracker and remain open.
+
+## Execution update, 2026-11-09
+
+The plan-first freeze is recorded in
+[`NATURAL_KV_L1_PLAN_20261109.md`](NATURAL_KV_L1_PLAN_20261109.md). The natural
+KV-pressure L1 specification was frozen separately from the
+controlled lifecycle specification. It retains seed 42, the eight selected
+Dense source rows, the existing model/source/observer/wheel identities and the
+two-attempt ceiling, while leaving all test-retraction environment variables
+unset. The frozen spec hash is
+`e615cd48371a4fbf3a48f87aeb1fdcd34ea9b694f7de5f795b5bfd51c6b16828`.
+
+A fresh gpu6 GPU0 guard found all four GPUs occupied by unrelated processes
+before any server or request was started. The natural-pressure run therefore
+has status **INCOMPLETE** with zero attempts, not PASS, FAIL or UNCOVERED. The
+guard receipt and exact GPU snapshot are retained under
+`experimental/token_replay/evidence/natural-kv-l1-20261109/`. The historical
+c4/c8 artifacts remain the separate controlled-trigger evidence and still do
+not support natural-pressure coverage. B2 remains DEFERRED.

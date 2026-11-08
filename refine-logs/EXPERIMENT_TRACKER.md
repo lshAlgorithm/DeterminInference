@@ -1,6 +1,6 @@
 # Experiment Tracker
 
-Date: 2026-11-08. The planning pipeline itself launched GPU jobs: **0**; the status rows include separately archived execution evidence. Default review is Codex-only provisional; Shen Yue is not required unless explicitly requested.
+Date: 2026-11-09. The planning pipeline itself launched GPU jobs: **0**; the status rows include separately archived execution evidence and the natural-pressure guard receipt. Default review is Codex-only provisional; Shen Yue is not required unless explicitly requested.
 
 | Run ID | Milestone | Purpose | System / data | Decisive metrics | Priority | Status | Evidence / next gate |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -12,7 +12,8 @@ Date: 2026-11-08. The planning pipeline itself launched GPU jobs: **0**; the sta
 | B0-moe | M0 | Bounded supporting report | 308 real/synthetic requests; TP2/EP2 | Routing differs; throughput interval spans zero | Reuse | COMPLETE | Rank timings only 9/308; no new MoE study |
 | B1-prepare | M1 | Implement real lifecycle cases and freeze trigger | Existing lifecycle harness plus targeted functions | Source IDs, expected outputs, observed-event schema, limits | MUST before B1 GPU | COMPLETE | Frozen c4/c8 specs and controlled pause driver; natural-pressure trigger remains a separate boundary |
 | B1-L1-controlled | M2 | Same-request retraction/resume under documented pause/retract trigger | One fixed complete replay request in isolated no-CUDA-graph service | 641/641 IDs; reset, resumed extend/decode and length finish | Recommended pre-merge | PASS | `lifecycle-pause-20261107-raw.tar.gz`; controlled trigger only |
-| B1-L1-natural-pressure | M2 | Same-request retraction/resume from natural KV pressure | c4/c8 pressure windows | No qualifying same-request reset/resume chain | Recommended pre-merge | UNCOVERED | `lifecycle-20261107/c4/recheck.json`, `c8/recheck.json`; do not generalize controlled L1 |
+| B1-L1-natural-pressure | M2 | Same-request retraction/resume from the historical c4/c8 lifecycle windows | c4/c8 windows with `SGLANG_TEST_RETRACT=true` | Test-trigger events only; no qualifying natural chain | Recommended pre-merge | UNCOVERED | `lifecycle-20261107/c4/recheck.json`, `c8/recheck.json`; controlled evidence is not natural-pressure coverage |
+| B1-L1-natural-pressure-20261109 | M2 | Same-request retraction/resume from natural KV pressure | Frozen Dense selection; trigger environment unset | No GPU attempt: fresh GPU0 guard failed before launch | Recommended pre-merge | INCOMPLETE | `NATURAL_KV_L1_PLAN_20261109.md`, `natural-kv-l1-20261109.spec.json`, `evidence/natural-kv-l1-20261109/guard-receipt.json`; retry only after a fresh guard |
 | B1-L2 | M2 | Filter/merge and state retirement | Unequal lengths and ordinary/replay mixture | Actual events; output equality; ordinary follow-up | Recommended pre-merge | PASS | Read-only rechecks for c4/c8; original receipts retained |
 | B1-L3 | M2 | Cancellation cleanup | In-flight replay abort then ordinary/fresh replay | Backend abort before finish; no resumed cancelled request or state leakage | Recommended pre-merge | PASS | Read-only rechecks for c4/c8; original receipts retained with old validator status |
 | B2-cpu | M3 | Finite-cohort/observation gate | Four loaded sessions, four profile root admissions, snapshot/warmup | Tail drains; no fifth root; complete occurrence mapping | Conditional | DEFERRED | Only if instrumented AgentX C2 extension is needed; source change reviewed |

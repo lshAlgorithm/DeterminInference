@@ -38,5 +38,8 @@ Anchor preserved verbatim. One dominant contribution remains: explicit token-bea
 
 Post-plan execution evidence is recorded separately: controlled L1 passed on the
 documented pause/retract path with 641/641 output IDs, L2 and L3 passed in the
-read-only lifecycle rechecks, and natural KV-pressure L1 remains UNCOVERED.
-This execution update does not change the Codex-only provisional review status.
+read-only lifecycle rechecks, and the historical c4/c8 windows did not expose a
+natural same-request chain. A new natural-pressure specification was frozen,
+but its fresh gpu6 GPU0 guard failed before launch, so that run is INCOMPLETE;
+natural KV-pressure L1 remains unsupported. This execution update does not
+change the Codex-only provisional review status.

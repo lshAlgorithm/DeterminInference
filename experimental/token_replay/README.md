@@ -43,6 +43,18 @@ The public hash-only Weka revision is
 `23f152f6f0f9399a85901b89a6458def0ef16729`. Its64K YaRN reference is separate
 from the16K Dense causal comparison.
 
+The natural KV-pressure L1 follow-up is frozen separately in
+[natural-kv-l1-20261109.spec.json](natural-kv-l1-20261109.spec.json). It reuses
+the Dense selection and identity hashes but leaves
+`SGLANG_TEST_RETRACT`, `SGLANG_TEST_RETRACT_INTERVAL` and
+`SGLANG_TEST_RETRACT_NO_PREFILL_BS` unset. Use a fresh GPU0 guard, a unique
+output root and at most the two attempts declared by the spec. A natural L1
+PASS requires a same-request `retraction_trigger` with `trigger=kv_full`, then
+the complete reset/resume/output-ID chain; test-trigger or pause-trigger events
+are not eligible. The 2026-11-09 guard found GPU0 occupied before launch, so
+that run is recorded as INCOMPLETE in
+`evidence/natural-kv-l1-20261109/guard-receipt.json`.
+
 These commands run on gpu6 after placing the checked-in scripts/specifications
 and archived selected datasets beneath `/home/tegao/infra-token-replay`.
 Output directories must not exist. Preserve all failed outputs and choose a new
@@ -129,3 +141,8 @@ python3 verify_delivery.py \
   --root "$review_root" \
   --output "$review_root/delivery-verification.json"
 ```
+
+The natural guard receipt is compact evidence and does not replace the seven
+archived B0 evidence packages required by `verify_delivery.py`. The new natural
+specification and validator are source artifacts; they do not inherit review
+acceptance from the prior source/wheel freeze.

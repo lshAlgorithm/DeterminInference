@@ -479,3 +479,23 @@ passing attempt are retained in
 This establishes **controlled L1 correctness**, while natural KV-pressure L1
 coverage and CUDA-graph startup cause remain unresolved. No performance or
 cross-family review claim follows from this check.
+
+## Natural KV-pressure follow-up, 2026-11-09
+
+A separate natural-pressure specification was frozen from the same Dense
+selection, model, serving source, observer, wheel and seed 42. Its trigger
+contract leaves `SGLANG_TEST_RETRACT`, its interval and its no-prefill override
+unset; only the scheduler's `kv_full` condition can qualify an L1 event. The
+specification hash is `e615cd48371a4fbf3a48f87aeb1fdcd34ea9b694f7de5f795b5bfd51c6b16828`.
+The selected input/output vectors and the existing lifecycle identity are not
+modified. The natural validator separately requires a same-request
+`retraction_trigger` with `trigger=kv_full` before accepting an L1 chain.
+
+The fresh gpu6 GPU0 guard at `2026-11-08T16:38:48Z` found all four GPUs occupied
+by unrelated processes, so zero natural-pressure attempts were launched. The
+guard receipt is
+[`guard-receipt.json`](../../experimental/token_replay/evidence/natural-kv-l1-20261109/guard-receipt.json).
+This run is **INCOMPLETE**, not a natural-pressure result. Natural KV-pressure
+coverage remains unsupported; the controlled 641-token result remains the
+narrow lifecycle conclusion. No B2 source/wheel change or overhead measurement
+was started.
