@@ -54,6 +54,9 @@ the complete reset/resume/output-ID chain; test-trigger or pause-trigger events
 are not eligible. The 2026-11-09 guard found GPU0 occupied before launch, so
 that run is recorded as INCOMPLETE in
 `evidence/natural-kv-l1-20261109/guard-receipt.json`.
+The local/gpu6 artifact hashes are pinned in
+`natural-kv-l1-20261109.manifest.json`; the same manifest and source artifacts
+are staged under `/home/tegao/infra-token-replay/` on gpu6.
 
 These commands run on gpu6 after placing the checked-in scripts/specifications
 and archived selected datasets beneath `/home/tegao/infra-token-replay`.
