@@ -107,3 +107,25 @@ Raw evidence beneath `evidence/` uses Git LFS. Preserve specifications,
 receipts, model/data revisions, excluded source windows and negative runs with
 the final tables. Codex-only positive reviews remain provisional when Claude
 review is unavailable; deterministic checks support only their tested scope.
+
+`verify_delivery.py` expects the flat campaign root used on gpu6. The checked-in
+evidence keeps large raw directories in separate archives, so a local replay of
+the delivery check first stages all required archives into a temporary root:
+
+```bash
+cd experimental/token_replay
+review_root=$(mktemp -d)
+for archive in \
+  evidence/dense-formal-evidence-20261106.tar.gz \
+  evidence/entry-evidence-20261106.tar.gz \
+  evidence/dense-preflight-overhead-20261106.tar.gz \
+  evidence/moe-recorder-paired-evidence-20261106.tar.gz \
+  evidence/storage-doc-witness-evidence-20261106.tar.gz \
+  evidence/weka-reference-evidence-20261106.tar.gz \
+  evidence/moe-routing-rank-evidence-20261106.tar.gz; do
+  tar -xzf "$archive" -C "$review_root"
+done
+python3 verify_delivery.py \
+  --root "$review_root" \
+  --output "$review_root/delivery-verification.json"
+```

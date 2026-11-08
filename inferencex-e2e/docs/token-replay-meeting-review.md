@@ -454,6 +454,9 @@ and merging (L2) passed, as did active cancellation, backend abort, batch
 retirement and post-cancel ordinary/replay followups (L3). The same longest
 request never had a reset-and-resume chain, so L1 remains **UNCOVERED**. Test
 retraction triggers and resets of other requests do not satisfy that check.
+The original c4/c8 receipts retain `L3: UNCOVERED` from the first validator;
+the later read-only rechecks applied the corrected validator to the unchanged
+observer events and record `L3: PASS`. Both layers are retained for provenance.
 The original receipts, corrected read-only validation, wire records, observer
 events, server logs and both frozen specs are in
 [`lifecycle-20261107-raw.tar.gz`](../../experimental/token_replay/evidence/lifecycle-20261107-raw.tar.gz).

@@ -1,6 +1,6 @@
 # Experiment Tracker
 
-Date: 2026-11-08. This pipeline performed planning and document checks only; GPU jobs launched: **0**. COMPLETE below refers to existing B0 evidence, not new execution. Default review is Codex-only provisional; Shen Yue is not required unless explicitly requested.
+Date: 2026-11-08. The planning pipeline itself launched GPU jobs: **0**; the status rows include separately archived execution evidence. Default review is Codex-only provisional; Shen Yue is not required unless explicitly requested.
 
 | Run ID | Milestone | Purpose | System / data | Decisive metrics | Priority | Status | Evidence / next gate |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -10,10 +10,11 @@ Date: 2026-11-08. This pipeline performed planning and document checks only; GPU
 | B0-http | M0 | Scoped C2 | Fixed 32 greedy prompts; c1/4/8 | Matched IDs/work; adjusted upper bound <1%; zero retractions | Reuse | COMPLETE | dense-overhead-02.json; HTTP scope only |
 | B0-phase | M0 | Warmup boundary/cost | 37 Dense/public runs | HTTP warmup drain precedes profiling | Reuse | COMPLETE | Does not prove GPU-event non-overlap or free warmup |
 | B0-moe | M0 | Bounded supporting report | 308 real/synthetic requests; TP2/EP2 | Routing differs; throughput interval spans zero | Reuse | COMPLETE | Rank timings only 9/308; no new MoE study |
-| B1-prepare | M1 | Implement real lifecycle cases and freeze trigger | Existing lifecycle harness plus targeted functions | Source IDs, expected outputs, observed-event schema, limits | MUST before B1 GPU | TODO | Choose/freeze exact controls; function-level commits and focused review |
-| B1-L1 | M2 | Same-request retraction/resume | One fixed complete replay request in bounded mixed batch | Retraction, resume position, exact continuous output | Recommended pre-merge | TODO | <=2 declared attempts within shared 0.5 GPU-hour budget; absence=UNCOVERED |
-| B1-L2 | M2 | Filter/merge and state retirement | Unequal lengths and ordinary/replay mixture | Actual events; output equality; ordinary follow-up | Recommended pre-merge | TODO | Reuse completed mixed fixture, add only missing actual event witness |
-| B1-L3 | M2 | Cancellation cleanup | In-flight replay abort then ordinary/fresh replay | Backend abort before finish; no resumed cancelled request or state leakage | Recommended pre-merge | TODO | Client disconnect is insufficient; same shared B1 budget |
+| B1-prepare | M1 | Implement real lifecycle cases and freeze trigger | Existing lifecycle harness plus targeted functions | Source IDs, expected outputs, observed-event schema, limits | MUST before B1 GPU | COMPLETE | Frozen c4/c8 specs and controlled pause driver; natural-pressure trigger remains a separate boundary |
+| B1-L1-controlled | M2 | Same-request retraction/resume under documented pause/retract trigger | One fixed complete replay request in isolated no-CUDA-graph service | 641/641 IDs; reset, resumed extend/decode and length finish | Recommended pre-merge | PASS | `lifecycle-pause-20261107-raw.tar.gz`; controlled trigger only |
+| B1-L1-natural-pressure | M2 | Same-request retraction/resume from natural KV pressure | c4/c8 pressure windows | No qualifying same-request reset/resume chain | Recommended pre-merge | UNCOVERED | `lifecycle-20261107/c4/recheck.json`, `c8/recheck.json`; do not generalize controlled L1 |
+| B1-L2 | M2 | Filter/merge and state retirement | Unequal lengths and ordinary/replay mixture | Actual events; output equality; ordinary follow-up | Recommended pre-merge | PASS | Read-only rechecks for c4/c8; original receipts retained |
+| B1-L3 | M2 | Cancellation cleanup | In-flight replay abort then ordinary/fresh replay | Backend abort before finish; no resumed cancelled request or state leakage | Recommended pre-merge | PASS | Read-only rechecks for c4/c8; original receipts retained with old validator status |
 | B2-cpu | M3 | Finite-cohort/observation gate | Four loaded sessions, four profile root admissions, snapshot/warmup | Tail drains; no fifth root; complete occurrence mapping | Conditional | DEFERRED | Only if instrumented AgentX C2 extension is needed; source change reviewed |
 | B2-reference | M4 | Single immutable capture and calibration | Same cohort, c1, symmetric exact-output events | Per-row consistency; warmup prefix; full observable IDs | Conditional | DEFERRED | Cannot recapture until pass; budget includes capture/calibration |
 | B2-pairs | M4 | Instrumented AgentX cost | Same cohort and work, c1 | 3/5 paired adjusted intervals; all IDs/work match | Conditional | DEFERRED | <=1.5 GPU-hours all-inclusive; failed matches remain evidence |

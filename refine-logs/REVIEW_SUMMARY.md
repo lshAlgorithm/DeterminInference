@@ -35,3 +35,8 @@ Weights are 15/25/25/15/10/5/5%; CALIBRATION:none. No reference examples or mode
 Anchor preserved verbatim. One dominant contribution remains: explicit token-bearing integration with ordinary forward/sampling and bounded lifecycle/cost evidence. The source-grounded deterministic retraction trigger makes B1 more reproducible without claiming natural-pressure frequency. No new architecture or benchmark campaign was added. B2 remains conditional because per-occurrence equality and symmetric observation can fail honestly.
 
 [Review availability receipt](REVIEW_AVAILABILITY.md) records the exact skill instruction and absent capability. Deterministic artifact checks cover version parity, links and claim/anchor consistency only; they do not accept the method on behalf of Claude. The implementation's prior independent delivery review remains a separate evidence item.
+
+Post-plan execution evidence is recorded separately: controlled L1 passed on the
+documented pause/retract path with 641/641 output IDs, L2 and L3 passed in the
+read-only lifecycle rechecks, and natural KV-pressure L1 remains UNCOVERED.
+This execution update does not change the Codex-only provisional review status.
