@@ -6,6 +6,11 @@ The report distinguishes completed evidence from running or missing gates.
 All workload selection and sampling seeds are42. Token extensions are local
 experiments with `submission_valid=false`.
 
+For a Chinese walkthrough of the implementation, evidence boundaries and source
+reading order, open the [interactive learning page](learning/index.html) directly
+in a browser, or read the [learning notes](tutorial.md). The page is self-contained
+and works offline; source and evidence links use the surrounding repository.
+
 ## Code and environment
 
 | Component | Frozen base or artifact |

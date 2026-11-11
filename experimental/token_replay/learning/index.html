@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>AgentX · 一颗 token 的旅程</title>
+<style>
+:root{--paper:#f5f3eb;--ink:#253b32;--muted:#667167;--line:#d9ddcf;--accent:#c05a35;--leaf:#dfe7d7;--white:#fffef9;--serif:"Songti SC","Noto Serif CJK SC","STSong",serif;--sans:"PingFang SC","Microsoft YaHei",sans-serif;--mono:"SFMono-Regular",Consolas,monospace}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:45px}body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.85}button,input{font:inherit}button,a{-webkit-tap-highlight-color:transparent}a{color:inherit}a:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:4px}button{cursor:pointer}aside{position:fixed;inset:0 auto 0 0;width:260px;padding:32px 23px;overflow:auto;border-right:1px solid var(--line);background:#eeeee4;z-index:5}.brand{font:600 25px var(--serif);letter-spacing:-1px}.brand small{font:11px var(--mono);letter-spacing:2px;display:block;margin-top:8px;color:var(--muted)}.side-note{font-size:12px;color:var(--muted);margin:28px 0 18px}.search{width:100%;border:1px solid #c7cdbd;background:transparent;border-radius:4px;padding:8px 10px;font-size:12px;color:var(--ink)}nav{margin-top:20px}nav a{display:flex;gap:12px;text-decoration:none;font-size:12px;line-height:1.6;padding:9px 6px;border-left:2px solid transparent}nav a span{font:10px var(--mono);color:var(--muted);padding-top:4px}nav a:hover,nav a.active{background:#e1e6d9;border-left-color:var(--accent)}.side-bottom{margin-top:30px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);padding-top:18px}main{margin-left:260px;max-width:1400px;padding:38px 64px 80px}.topline{display:flex;justify-content:space-between;gap:15px;align-items:center;font:11px var(--mono);letter-spacing:1.4px;color:var(--muted);padding-bottom:20px;border-bottom:1px solid var(--line)}.topline a{font-family:var(--sans);letter-spacing:0;text-decoration:none}.hero{padding:59px 0 35px;position:relative}.eyebrow{font:11px var(--mono);letter-spacing:2px;color:var(--accent)}h1{font-family:var(--serif);font-size:clamp(39px,4.7vw,68px);font-weight:600;letter-spacing:-2px;line-height:1.26;margin:22px 0}h1 em{font-style:normal;color:var(--accent)}.intro{max-width:650px;font-size:16px;line-height:2;color:#526156}.hero-bottom{display:flex;gap:24px;align-items:center;margin-top:28px}.start{display:inline-block;background:var(--ink);color:var(--paper);padding:10px 19px;text-decoration:none;font-size:13px;border-radius:3px}.reading-note{font-size:12px;color:var(--muted)}.stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:16px 0 49px}.stat{padding:24px 20px;border-right:1px solid var(--line)}.stat:first-child{padding-left:0}.stat:last-child{border:0}.stat b{font:36px var(--serif);display:block}.stat span{font-size:12px;color:var(--muted)}.section-top{display:flex;justify-content:space-between;align-items:baseline;gap:20px;margin-bottom:18px}h2{font:600 30px/1.5 var(--serif);margin:0 0 24px;letter-spacing:-.5px}.section-top h2{font-size:25px;margin:0}.section-top small{font-size:11px;color:var(--muted)}.map{margin-bottom:45px}.stages{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.stage{position:relative;border:1px solid var(--line);background:transparent;text-align:left;padding:17px 12px;color:var(--ink);border-radius:4px;transition:background .15s}.stage.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}.stage small{display:block;font:10px var(--mono);opacity:.65;margin-bottom:10px}.stage strong{font-size:13px;font-weight:500}.stage:not(:last-child):after{content:'→';position:absolute;right:-10px;top:38%;color:var(--accent);z-index:1}.stage-detail{padding:20px 24px;background:var(--leaf);margin-top:12px;min-height:115px;border-radius:4px}.stage-detail b{font-size:14px}.stage-detail p{font-size:13px;line-height:1.9;margin:7px 0 0;max-width:750px}.lab{background:var(--white);border:1px solid var(--line);border-radius:5px;padding:28px;margin-bottom:60px}.lab p{font-size:13px;color:var(--muted);margin:7px 0 20px}.lab-title{font:600 23px var(--serif)}.modes{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}.modes button{border:1px solid var(--line);background:transparent;padding:6px 12px;font-size:12px;border-radius:3px;color:var(--ink)}.modes button[aria-pressed=true]{background:var(--leaf);border-color:#83997d}.trajectory{display:grid;grid-template-columns:110px 1fr;align-items:center;gap:12px;margin:12px 0}.trajectory label{font-size:12px;color:var(--muted)}.tokens{display:flex;align-items:center;gap:9px}.token{display:inline-grid;place-items:center;min-width:49px;height:43px;background:var(--paper);border:1px solid var(--line);font:15px var(--mono);border-radius:3px}.token.wrong{color:#a7472e;border-color:#d99e8d;background:#fbede6}.token.fixed{color:#33573b;background:#e5eddf;border-color:#96ad8a}.arrow{color:#9da895}.explain{font-size:13px;background:var(--paper);padding:13px 16px;margin-top:22px;border-left:3px solid var(--accent);min-height:75px}.chapter{padding:43px 0 25px;border-top:1px solid var(--line)}.chapter-label{font:10px var(--mono);letter-spacing:2px;color:var(--accent);margin-bottom:15px}.prose{font-size:14px;line-height:2.05}.prose p{margin:18px 0}.prose h3{font:600 22px/1.6 var(--serif);margin-top:35px}.prose strong{font-weight:600}.prose a{text-decoration-color:#b5c0a9;text-underline-offset:4px}.prose a:hover{color:var(--accent)}code{font:12px/1.8 var(--mono);background:#e9ecdf;padding:2px 5px;border-radius:3px;overflow-wrap:anywhere}pre{background:#23392f;color:#edf0e4;padding:22px;border-radius:4px;overflow:auto;line-height:1.7}pre code{background:none;color:inherit;padding:0;overflow-wrap:normal}table{width:100%;border-collapse:collapse;font-size:12px;line-height:1.8;margin:23px 0;display:block;overflow:auto}th,td{text-align:left;padding:13px 15px;border-bottom:1px solid var(--line);min-width:120px;vertical-align:top}th{background:#e6eadf;font-weight:500;color:#3a5141}tr:nth-child(even) td{background:#f0f1e8}.prose ol,.prose ul{padding-left:24px}.prose li{padding-left:5px;margin:12px 0}.flow-note{padding:17px 20px;border-left:2px solid var(--accent);background:var(--leaf);font-size:13px}.footer{margin-top:45px;padding-top:22px;border-top:1px solid var(--line);font-size:11px;color:var(--muted)}.progress{position:fixed;top:0;left:260px;height:3px;background:var(--accent);width:0;z-index:10}.menu{display:none}.no-results{font-size:12px;color:var(--muted);padding:12px 6px}.back-top{position:fixed;bottom:22px;right:25px;background:var(--ink);color:var(--paper);border:none;border-radius:3px;padding:8px 12px;font-size:12px}mark{background:#f0d7a6;color:inherit}[hidden]{display:none!important}.chapter:target h2{color:var(--accent)}@media(min-width:1600px){main{padding-left:90px;padding-right:90px}}@media(max-width:1050px){aside{width:220px;padding:25px 17px}main{margin-left:220px;padding:30px}.progress{left:220px}.stages{gap:5px}.stage{padding:14px 8px}.stage strong{font-size:12px}}@media(max-width:740px){aside{transform:translateX(-100%);width:270px;transition:transform .2s;box-shadow:12px 0 40px #253b3215}body.menu-open aside{transform:translateX(0)}main{margin:0;padding:23px}.progress{left:0}.menu{display:inline-block;border:1px solid var(--line);background:var(--paper);padding:5px 10px;color:var(--ink);font-size:12px}.topline{font-size:9px;letter-spacing:.6px}.hero{padding-top:42px}h1{font-size:42px}.intro{font-size:14px}.stats{margin-bottom:35px}.stat{padding:18px 10px}.stat b{font-size:29px}.stat span{font-size:10px}.section-top{display:block}.section-top small{display:block;margin-top:5px}.stages{grid-template-columns:repeat(5,1fr)}.stage small{font-size:8px}.stage strong{font-size:11px}.stage{padding:10px 6px;min-height:81px}.stage:not(:last-child):after{right:-7px}.lab{padding:20px 16px}.trajectory{grid-template-columns:83px 1fr;gap:5px}.trajectory label{font-size:10px}.tokens{gap:6px}.token{min-width:38px;height:37px;font-size:13px}.hero-bottom{gap:15px}.reading-note{font-size:11px}h2{font-size:26px}.prose{font-size:14px}th,td{padding:10px}.back-top{right:15px;bottom:15px}.chapter{padding-top:30px}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}@media print{aside,.progress,.back-top,.menu,.modes{display:none}main{margin:0;padding:0}body{background:white;color:black}.chapter{break-before:auto}pre{white-space:pre-wrap}a{text-decoration:none}.lab,.stage-detail{break-inside:avoid}}
+</style></head><body><div class="progress" aria-hidden="true"></div><aside aria-label="学习目录"><div class="brand">AgentX<span style="color:var(--accent)">.</span><small>ENGINEERING FIELD NOTES</small></div><p class="side-note">从一颗 token 开始，<br>理解我们做过的推理工程。</p><label for="search" class="side-note">查找章节或概念</label><input id="search" class="search" type="search" placeholder="搜索 token、缓存、MoE…" autocomplete="off"><nav aria-label="章节导航"><a href="#overview" class="active"><span>—</span>从这里开始</a><a href="#chapter-0"><span>01</span>我们究竟完成了什么</a><a href="#chapter-1"><span>02</span>前置知识：只补当前用得到的</a><a href="#chapter-2"><span>03</span>一次请求怎样穿过系统</a><a href="#chapter-3"><span>04</span>一条记录怎样成为可发送的请求</a><a href="#chapter-4"><span>05</span>怎样接回原 AgentX 路线</a><a href="#chapter-5"><span>06</span>为什么替换一个整数也需要 GPU 工程</a><a href="#chapter-6"><span>07</span>缓存为什么会“看起来命中，实际上串会话”</a><a href="#chapter-7"><span>08</span>Dense 实验到底比较了什么</a><a href="#chapter-8"><span>09</span>MoE 为什么必须把 recorder 和性能分开</a><a href="#chapter-9"><span>10</span>请求跑完了，为什么 L1 还能 UNCOVERED</a><a href="#chapter-10"><span>11</span>怎样把实验变成别人能复查的交付</a><a href="#chapter-11"><span>12</span>最后把状态词分清</a><a href="#chapter-12"><span>13</span>建议阅读顺序</a></nav><div class="no-results" hidden>没有匹配章节，试试其他关键词。</div><div class="side-bottom">中文学习手册 · 本地可读<br>内容整理于 2026.11.11<br><a href="../tutorial.md">查看原始笔记 ↗</a></div></aside><main id="top"><div class="topline"><span><button class="menu" aria-expanded="false" aria-label="打开学习目录">目录 ☰</button> INFERENCE SYSTEMS / 001</span><a href="../../../inferencex-e2e/docs/token-replay-meeting-review.md">工程报告 ↗</a></div><header class="hero" id="overview"><div class="eyebrow">A JOURNEY THROUGH TOKEN REPLAY</div><h1>一颗 token 的旅程。<br><em>把工程，慢慢看懂。</em></h1><p class="intro">从「模型为什么会选出不同的字」开始，走进 AgentX 的数据、调度、缓存与验证。这里记录我们做了什么，也解释每一步为什么这样做。</p><div class="hero-bottom"><a class="start" href="#chapter-1">从基础概念开始 ↗</a><span class="reading-note">按自己的节奏阅读 · 无需运行 GPU</span></div></header><div class="stats"><div class="stat"><b>447<span style="font:14px var(--mono);margin-left:8px">requests</span></b><span>Dense 独立 reference · 精确 ID 校验</span></div><div class="stat"><b>36<span style="font:14px var(--mono);margin-left:8px">cells</span></b><span>Dense 固定矩阵 · 三次配对重复</span></div><div class="stat"><b>641<span style="font:14px var(--mono);margin-left:8px">tokens</span></b><span>受控恢复通过 · 自然压力仍未覆盖</span></div></div><section class="map" aria-labelledby="map-title"><div class="section-top"><h2 id="map-title">先看地图，再走进代码</h2><small>点击阶段，了解一次请求如何流动</small></div><div class="stages" role="group" aria-label="请求阶段"><button class="stage active" data-stage="0" aria-pressed="true"><small>01 / DATA</small><strong>记录变成 IDs</strong></button><button class="stage" data-stage="1" aria-pressed="false"><small>02 / HARNESS</small><strong>调度与隔离</strong></button><button class="stage" data-stage="2" aria-pressed="false"><small>03 / MODEL</small><strong>正常模型计算</strong></button><button class="stage" data-stage="3" aria-pressed="false"><small>04 / REPLAY</small><strong>替换下一 token</strong></button><button class="stage" data-stage="4" aria-pressed="false"><small>05 / EVIDENCE</small><strong>验证与证据</strong></button></div><div class="stage-detail" aria-live="polite"><b id="stage-title"></b><p id="stage-body"></p></div></section><section class="lab" aria-labelledby="lab-title"><div class="eyebrow">INTERACTIVE EXPLAINER / 概念示意</div><h2 class="lab-title" id="lab-title" style="margin:12px 0">同样显示「20」，模型走的路可能不同</h2><p>假设记录回复为 [10, 20, 30]，但模型第二步采样得到 99。切换视角，看看下一步究竟用了什么。</p><div class="modes" role="group" aria-label="替换方式"><button data-mode="normal" aria-pressed="true">正常生成</button><button data-mode="display" aria-pressed="false">只改显示</button><button data-mode="replay" aria-pressed="false">服务端 replay</button></div><div class="trajectory"><label>记录的回复</label><div class="tokens"><span class="token">10</span><span class="arrow">→</span><span class="token">20</span><span class="arrow">→</span><span class="token">30</span></div></div><div class="trajectory"><label>用户看到的 ID</label><div class="tokens" id="visible-tokens"></div></div><div class="trajectory"><label>下一步计算沿用</label><div class="tokens" id="internal-tokens"></div></div><div class="explain" id="mode-explain" aria-live="polite"></div></section><div id="chapters"><section class="chapter" id="chapter-0" aria-labelledby="title-0"><div class="chapter-label">FIELD NOTES / 01</div><h2 id="title-0">我们究竟完成了什么</h2><div class="prose"><table>
+<thead>
+<tr>
+<th>工作</th>
+<th>已有事实</th>
+<th>结论边界</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>原入口接入</td>
+<td>通过原 <code>infx.bench agentic</code> → <code>agentx profile</code> 路线接入 token 数据</td>
+<td>不是用独立小客户端替代整个 AgentX 的方法学</td>
+</tr>
+<tr>
+<td>服务端 token replay</td>
+<td>正常 forward、正常 sampling 后替换 token，替换发生在后续计算之前</td>
+<td>没有跳过模型计算；不承诺浮点 KV 逐 bit 相同</td>
+</tr>
+<tr>
+<td>调度与隔离</td>
+<td>验证 warmup、snapshot、spawn/join、reset、tree cache salt</td>
+<td>合成 DAG fixture 的覆盖不能冒充原始数据的真实 DAG</td>
+</tr>
+<tr>
+<td>Dense 正式矩阵</td>
+<td>36 cells，25755 profiling requests、1716 warmup requests，无 errors/skips/cancellations</td>
+<td>闭环调度下实际请求混合会改变，必须保留分母</td>
+</tr>
+<tr>
+<td>Dense 独立正确性</td>
+<td>32 sessions、447 requests，从头执行的 reference 全部 output IDs 精确一致</td>
+<td>不等于每次性能实验都逐 ID 审计过</td>
+</tr>
+<tr>
+<td>机制开销</td>
+<td>固定 32 prompts、greedy、HTTP 边界、c1/c4/c8 满足预设 3% 上界</td>
+<td>不是完整 AgentX 的通用 overhead 保证</td>
+</tr>
+<tr>
+<td>Weka 默认路线</td>
+<td>独立 64K YaRN 配置完成；保留 16K 无合格 trace 及中间失败</td>
+<td>hash-only 数据不能还原真实回复；不跨数据集当配对基线</td>
+</tr>
+<tr>
+<td>MoE</td>
+<td>21 sessions、308 requests/内容类型；性能、路由、双 rank 诊断分别记录</td>
+<td>路由分布变了，不代表吞吐显著变快或计算时间存在因果变化</td>
+</tr>
+<tr>
+<td>受控 L1</td>
+<td>同一请求 pause/retract/resume，641/641 output IDs 一致</td>
+<td>仅受控触发，不是自然 KV-pressure 覆盖</td>
+</tr>
+<tr>
+<td>L2 / L3</td>
+<td>混合 batch filter/merge；活动取消、后端 abort、退出 batch 与后续请求通过</td>
+<td>原 receipt 和修正后的只读 recheck 都保留</td>
+</tr>
+<tr>
+<td>自然 L1</td>
+<td>spec、validator、hash manifest 已冻结；原 gpu6 guard 未通过，零次启动</td>
+<td>该 run 为 INCOMPLETE；自然覆盖仍 UNCOVERED</td>
+</tr>
+<tr>
+<td>B2</td>
+<td>有条件的 instrumented AgentX c1 fixed-cohort 计划</td>
+<td>DEFERRED，没有扩大 overhead claim</td>
+</tr>
+<tr>
+<td>审阅与交付</td>
+<td>Codex review 完成但 provisional；确定性检查有记录</td>
+<td>Claude unavailable；不是双审通过，无 upstream formal acceptance 或 official benchmark score</td>
+</tr>
+</tbody>
+</table>
+<p>这些工作由会话中的工具与审阅流程完成。下面从基本概念开始，逐步说明各层代码为什么存在、如何配合，以及结果意味着什么。</p>
+<p>权威结果集中在 <a href="../../../inferencex-e2e/docs/token-replay-meeting-review.md">主报告</a>、<a href="../../../refine-logs/EXPERIMENT_TRACKER.md">实验跟踪</a>、<a href="../../../refine-logs/REVIEW_SUMMARY.md">审阅总结</a>。本笔记对已有记录作解释，本次没有重新执行 GPU 实验。</p></div></section><section class="chapter" id="chapter-1" aria-labelledby="title-1"><div class="chapter-label">FIELD NOTES / 02</div><h2 id="title-1">前置知识：只补当前用得到的</h2><div class="prose"><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>通俗解释</th>
+<th>在这里为什么需要</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>token / tokenizer</td>
+<td>模型处理的是整数序列；一个 token 不一定等于一个汉字或单词</td>
+<td>同样的显示文本不一定有完全相同的 token 边界</td>
+</tr>
+<tr>
+<td>chat template</td>
+<td>把角色、工具调用和消息排成模型需要的格式</td>
+<td>工具参数被重复 JSON 编码就会改变输入</td>
+</tr>
+<tr>
+<td>embedding</td>
+<td>用 token ID 查出模型向量</td>
+<td>replay 的 ID 仍正常进入 embedding lookup</td>
+</tr>
+<tr>
+<td>prefill</td>
+<td>一次处理 prompt，建立对应 KV</td>
+<td>长 prompt 的主要前置工作</td>
+</tr>
+<tr>
+<td>decode</td>
+<td>自回归地产生后续 token</td>
+<td>每一步的 token 会影响下一步计算</td>
+</tr>
+<tr>
+<td>sampling / greedy</td>
+<td>从概率分布选 token；greedy 取最大值</td>
+<td>replay 仍先执行原采样路径，再替换选出的 ID</td>
+</tr>
+<tr>
+<td>KV cache / prefix cache</td>
+<td>保存注意力历史；相同前缀可复用已算部分</td>
+<td>前缀 token 漂移会破坏后续共享</td>
+</tr>
+<tr>
+<td>batch / scheduler</td>
+<td>动态把多个请求安排到同一次计算</td>
+<td>请求完成、加入、取消后，行号与元数据必须继续对应</td>
+</tr>
+<tr>
+<td>request ID / event</td>
+<td>请求身份与后端发生的动作</td>
+<td>判断是否同一个请求真正 retract 后恢复</td>
+</tr>
+<tr>
+<td>wall time / GPU time</td>
+<td>用户等待的经过时间 / GPU 上某段工作时间</td>
+<td>两者不能混作一个指标</td>
+</tr>
+<tr>
+<td>seed / hash</td>
+<td>控制伪随机选择 / 标识具体字节</td>
+<td>seed 固定不能取代模型、数据和代码版本冻结</td>
+</tr>
+</tbody>
+</table>
+<p>最低前置能力：能读 Python 的 list/dict、函数、异常、文件读写；知道 HTTP 请求与 JSON；会用终端进入目录。暂时不需要先学完全部深度学习。</p></div></section><section class="chapter" id="chapter-2" aria-labelledby="title-2"><div class="chapter-label">FIELD NOTES / 03</div><h2 id="title-2">一次请求怎样穿过系统</h2><div class="prose"><div class="flow-note">上方「请求地图」展示了这条完整链路：数据 → 调度 → HTTP → 模型 → 替换 → 结果验证。</div>
+<p>这是模块及事件顺序图，并非所有箭头都是同一 Python 进程里的直接函数调用。AgentX 与模型服务通过 HTTP 通信，SGLang 内部还有调度与异步执行。</p>
+<p>假设记录回复为 <code>[10,20,30]</code>，模型本来会选 <code>[10,99,...]</code>。只在客户端把 <code>99</code> 显示成 <code>20</code>，模型下一步仍沿 <code>99</code> 计算。我们的替换发生在服务端：第二步选出的 <code>99</code> 被改成 <code>20</code>，后续 forward 使用 <code>20</code>。这样模型内部沿着记录轨迹走，后续包含 <code>[10,20,30]</code> 的 prompt 才能匹配对应前缀。</p>
+<p>这里的“recorded”有两种来源，要分清：内容实验使用目标 tokenizer 编码的记录回复；固定 32-prompt 开销实验使用先捕获的目标模型 greedy 回复。两者服务于不同问题。</p></div></section><section class="chapter" id="chapter-3" aria-labelledby="title-3"><div class="chapter-label">FIELD NOTES / 04</div><h2 id="title-3">一条记录怎样成为可发送的请求</h2><div class="prose"><p>状态：已展开概念与源码路线。读完应能解释：数据哪里来，为什么不能直接使用源模型的 token IDs。</p>
+<p>主链：固定 source revision → 候选 session → 模板转换与目标 tokenizer → 合格连续窗口 → token trace 与 provenance。</p>
+<ol>
+<li>阅读 <a href="../prepare_exgentic.py">prepare_exgentic.py</a> 的 <code>encode_span</code>：输入源 span 和目标 tokenizer；输出目标模型的 prompt/response IDs。工具调用参数字符串需要先转回 JSON 对象再交给模板。</li>
+<li>阅读 <code>qualify_session</code>：输入编码后的会话；判断完整请求是否适合上下文预算，选择连续窗口。不是为了让实验通过而截断超长请求。</li>
+<li>阅读 <code>source_candidates</code>、<code>prepare</code>、<code>make_weka</code>：候选顺序与 seed 决定可复现选择，输出会话文件和 manifest。看 <a href="../evidence/exgentic-dense-manifest.json">Dense manifest</a> 的来源、窗口、排除原因。</li>
+<li>在 <a href="../agentx-harness-v1.0.13.patch">harness patch</a> 搜索 <code>WekaTokenRequest.validate_token_pair</code> 和 <code>_attach_recorded_tokens</code>：确认成对 IDs 非空、长度与 <code>in/out</code> 一致，DAG 重建后按原 source indices 找回正确请求，复制 IDs 到 <code>Turn</code>。</li>
+</ol>
+<p>关键事实：Exgentic 固定 revision 为 <code>4b8ad4ab198438e5a170f9171c19c6a2cf7c1814</code>。Dense 检查 46/1959 个候选，得到 32 sessions、447 requests；不能声称全部候选均审过。最长 prompt+output 为 16143，符合 16K 条件。MoE 检查 128 candidates，得到 21 sessions、308 requests；旧模板不能忠实表达的 tool spans 被排除。</p>
+<p>以前 Dense <code>-01</code> 对 327/447 个输出的工具参数发生 double encoding。修正数据为 <code>exgentic-dense-02</code>；旧数据作为负面证据保留。这个错误说明：字段都是合法 JSON，也可能在语义格式上错一层。</p>
+<p>Weka public 固定 revision 为 <code>23f152f6f0f9399a85901b89a6458def0ef16729</code>，只有 hash 信息；hash 能帮助重建共享结构，不能反解出原始自然语言或真实回复 IDs。不要把重新合成的文本称为原文。</p>
+<p>选读：<a href="../audit_dense_corpus.py">audit_dense_corpus.py</a>、<a href="../check_target_template.py">check_target_template.py</a>。暂缓统计比较，课程 05 再看。</p></div></section><section class="chapter" id="chapter-4" aria-labelledby="title-4"><div class="chapter-label">FIELD NOTES / 05</div><h2 id="title-4">怎样接回原 AgentX 路线</h2><div class="prose"><p>状态：已展开概念与源码路线。读完应能解释：为什么这不是一个另起炉灶的小 replay 客户端。</p>
+<p>主链：环境配置 → <code>ReplayConfig</code> → 固定 harness 环境 → <code>agentx profile</code> → 原 scheduler → HTTP → 原结果收集。</p>
+<ol>
+<li>阅读 <a href="../../../inferencex-e2e/infx/bench/agentic/replay.py">agentic/replay.py</a> 的 <code>ReplayConfig.from_env</code>：检查 token trace、mode、wheel/hash 必须配套；<code>AGENTX_NUM_SESSIONS</code> 有适用范围和并发约束。</li>
+<li>阅读 <a href="../../../inferencex-e2e/infx/bench/agentic/venv.py">agentic/venv.py</a> 的 <code>bootstrap</code>：核对 wheel SHA-256 和 harness 1.0.13 身份，再安装到专用环境。源码相似不代表 wheel 字节相同。</li>
+<li>回到 <code>replay_argv</code>：默认走 public dataset；显式 token trace 才走本地 <code>weka_trace</code> 和 <code>sglang-token-completions</code>，seed 为 42，并标记 unsafe override。</li>
+<li>阅读 <a href="../../../inferencex-e2e/infx/bench/agentic/run.py">agentic/run.py</a> 的 <code>execute</code>、<code>_score</code>：执行 harness，随后调用结果收集和校验。追到 harness 边界时切换到补丁，不能假设依赖源码就在本仓库。</li>
+<li>在 harness patch 看 <code>CompletionsEndpoint.format_payload</code> 与 <code>SGLangTokenCompletionsEndpoint</code>：完整 prompt IDs 绕过 chat rendering；仅 recorded 模式发送 <code>replay_token_ids</code>；一 token warmup 也只发送一 token 的 replay 输出。</li>
+</ol>
+<p>三个开关：<code>AGENTX_TOKEN_TRACE</code> 指定本地 token 数据；<code>AGENTX_REPLAY_MODE=generated|recorded</code> 选 arm；<code>AGENTX_HARNESS_WHEEL</code> 与 <code>AGENTX_HARNESS_SHA256</code> 固定依赖字节。两 arm 使用相同 prompt 和输出长度，generated 正常生成，recorded 强制记录轨迹。</p>
+<p>没有 token 扩展时保留原 public 路线。本地扩展结果包含 <code>submission_valid=false</code>，表示本地实验，不是官方提交得分。</p>
+<p>Warmup 包括 snapshot primer 和每 lane 10 次加速 live replay；后者无 idle delay、每请求只生成一 token，但完整 prompt 的 prefill 仍有成本。现有 37 次边界审计未发现 warmup HTTP 与 profiling HTTP 重叠；这不等于无 GPU 干扰或 warmup 免费。删除 warmup 会改变初始缓存状态。</p>
+<p>原入口 acceptance 的 synthetic DAG fixture 完成 198 profiling + 42 warmup 请求，检查全部 240 个 wire prompt/replay/final output；覆盖 tree salt、join、reset 和 child idle gap。真实 Exgentic 缺失的 DAG 不会被凭空补成真实拓扑。</p>
+<p>选读：<a href="../check_harness.py">check_harness.py</a>、<a href="../check_dag_events.py">check_dag_events.py</a>、<a href="../audit_phase_boundary.py">audit_phase_boundary.py</a>。暂缓服务端 kernel，下一课再看。</p></div></section><section class="chapter" id="chapter-5" aria-labelledby="title-5"><div class="chapter-label">FIELD NOTES / 06</div><h2 id="title-5">为什么替换一个整数也需要 GPU 工程</h2><div class="prose"><p>状态：已展开概念与源码路线。读完应能解释：替换位置、内存组织与 batch 行映射。</p>
+<p>主链：HTTP 参数 → tokenizer/scheduler admission → <code>SamplingBatchInfo</code> → <code>TokenReplayBatch</code> → 正常采样 → 替换 → 下一步计算。</p>
+<p>以下依赖路径都在 <a href="../sglang-v0.5.10.patch">SGLang patch</a> 内，应用到 SGLang <code>1519acf</code> 基线；实际部署源另见归档。</p>
+<ol>
+<li><code>entrypoints/openai/protocol.py</code>、<code>serving_completions.py</code>：接收严格整数列表，将参数传入服务内部。</li>
+<li><code>sampling/sampling_params.py</code>：校验非空、词表范围、<code>max_new_tokens == len(replay_token_ids)</code>；要求 ignore_eos、没有 stop 条件；不支持 constrained decoding 等组合。</li>
+<li><code>managers/tokenizer_manager.py</code> 和 <code>scheduler.py</code>：输入加完整输出必须满足预算。对 replay 要显式拒绝，不能走普通生成的静默缩短逻辑；也拒绝 speculative decoding 和 custom logit processors 等未支持组合。</li>
+<li><code>sampling/sampling_batch_info.py</code>：随 batch 构造、filter、merge 管理 replay 状态。</li>
+<li><code>sampling/token_replay.py</code>：<code>TokenReplayBatch.from_requests</code> 将不同长度的输出拼成一个 packed GPU tensor；每行 metadata 为序列地址、长度、原 prompt 长度；普通请求没有 replay view。</li>
+<li><code>layers/sampler.py</code>：正常 forward 和 sampling 已完成后调用 <code>apply</code>，随后才附加 logprobs、交给后续调度计算。</li>
+</ol>
+<p>替换 kernel <code>_replace_sampled_tokens</code> 的索引为：</p>
+<pre><code class="language-text">step = position - original_prompt_length + 1
+当 0 &lt;= step &lt; recorded_length 时，把 sampled[row] 改为 recorded[step]
+</code></pre>
+<p>例如 prompt 长度 5，position 为 4 时，step=0，对应第一颗输出 token。恢复请求也必须沿绝对位置找到后续正确 ID，不能因 batch 重建把游标重置到输出开头。</p>
+<p><code>filter</code> 选择仍活跃的 views 和 metadata；<code>merge</code> 合并元数据，并为普通请求填零 metadata。不会在每次 decode 复制整条回复。最后一个 replay 请求退出时，状态可回到 <code>None</code>。小 view 可能仍持有整个 packed buffer，所以“剩余 token 字节变少”和“allocator 已释放多少”是两回事。</p>
+<p>固定存储 fixture 的 kernel 约 0.98–1.17 微秒/次，只是组件计时；真实成本还有 JSON、传输、staging、元数据维护和冷启动。单独 allocator probe 的 live allocation 最大约 8.7 KB、peak delta 最大约 9.7 KB，只覆盖所选 response，不是整个模型服务的显存增量上限。</p>
+<p>选读：<a href="../check_engine.py">check_engine.py</a> 的 <code>check_validation</code>、<code>check_kernel</code>、<code>check_engine</code>，以及 <a href="../check_storage.py">check_storage.py</a>、<a href="../profile_replay.py">profile_replay.py</a>。暂缓 retract，课程 07 专门讲。</p></div></section><section class="chapter" id="chapter-6" aria-labelledby="title-6"><div class="chapter-label">FIELD NOTES / 07</div><h2 id="title-6">缓存为什么会“看起来命中，实际上串会话”</h2><div class="prose"><p>状态：已展开概念与源码路线。读完应能解释：cache salt 必须真的进入服务端 key。</p>
+<p>主链：tree 实例 → harness cache-bust marker → payload <code>cache_salt</code> → SGLang <code>extra_key</code> → prefix-cache 隔离与命中。</p>
+<ol>
+<li>在 harness patch 的 <code>workers/worker.py</code> 看 <code>cache_salt</code> 如何来自 <code>credit.cache_bust_marker</code>。同一树的 parent/children 应共享，独立 tree 实例应不同。</li>
+<li>在 SGLang patch 的 scheduler 创建 <code>Req</code> 处看 <code>extra_key=recv_req.extra_key</code>。这是已修复的关键传递，不能因为 wire 中有 salt 就认为隔离生效。</li>
+<li>阅读 <a href="../check_cache_salt.py">check_cache_salt.py</a> 的 <code>check_cache_salt</code>，理解相同 prompt、A/B/A salt 的三次请求为什么是隔离 witness。</li>
+</ol>
+<p>实际修复前 cached tokens 为 <code>[0,63,63]</code>，B 错用了 A 的缓存；修复后为 <code>[0,0,63]</code>，B 独立，第三次 A 可以复用第一次 A。早期失效 fixture 保留，不能挑修复后的日志假装问题从未发生。</p>
+<p>cache hit 表示复用了某些前缀 token 的计算，不代表输出语义更正确。resident、protected/non-evictable、allocated KV 也不是同一个数。报告区分可驱逐前缀、保护前缀和包括进行中 suffix 的已分配 KV。</p>
+<p>选读：<a href="../check_entry_log.py">check_entry_log.py</a>、主报告的 Original-path acceptance。暂缓吞吐归因，下一课再看。</p></div></section><section class="chapter" id="chapter-7" aria-labelledby="title-7"><div class="chapter-label">FIELD NOTES / 08</div><h2 id="title-7">Dense 实验到底比较了什么</h2><div class="prose"><p>状态：已展开概念与源码路线。读完应能解释：正确性、缓存效果、机制开销为什么是三种实验。</p>
+<p>主链：冻结 spec → guard → 新 server → warmup → 固定 admission 窗口 → drain → phase-separated summary → 配对统计。</p>
+<ol>
+<li>阅读 <a href="../dense-formal-01.spec.json">dense-formal-01.spec.json</a>：2 modes × 3 concurrencies × 2 capacities × 3 repeats = 36 cells。context=16384；KV capacities=131072/16384；每 cell profiling admission=900 秒。</li>
+<li>阅读 <a href="../run_campaign.py">run_campaign.py</a> 的 <code>gpu_guard</code>、<code>run_point</code>：独立输出、命令、环境、进程收尾与 receipt；然后读 <a href="../summarize_campaign.py">summarize_campaign.py</a> 的 <code>summarize_point</code>，看 warmup/profile 如何分开。</li>
+<li>阅读 <a href="../compare_dense.py">compare_dense.py</a> 的 <code>compare_dense</code> 和 <a href="../dense-results.md">dense-results.md</a>：按共同 source rows 标准化缓存，保留实际 arm 的请求数与时间。吞吐分母包含 drain，不能只拿 900 秒替代真实完成时间。</li>
+<li>阅读 <a href="../measure_overhead.py">measure_overhead.py</a> 的 <code>measure_overhead</code>：排序后的候选里 <code>random.Random(42).sample(...,32)</code>；先 capture greedy reference；flush 同样排除在计时外；相同 IDs/length/cache work 后再做配对时间比较。</li>
+</ol>
+<p>Dense 的 roomy 容量在 c1/c4/c8 上缓存命中率约增加 1.65 个百分点，吞吐点估计分别增加 0.0882% / 0.5689% / 0.8466%。压力 c4/c8 吞吐区间跨零；压力 c8 的缓存差异也未建立。不要将局部结果概括成所有负载通用加速。</p>
+<p>AgentX 是闭环调度：请求快一点，900 秒内可能送进更多后续请求；所以两 arm 的实际 source mix 不必相同。固定 prompt 的 overhead 实验则专门匹配工作量，回答“多出来的 replay 机制贵不贵”。它不是 Dense workload 结果的替身。</p>
+<p>每个 pair 的比较量是：</p>
+<pre><code class="language-text">d_i = T_recorded / T_generated - 1
+</code></pre>
+<p>先三组，顺序 G/R、R/G、G/R；区间触及或包含 3% 则直接扩到五组，保持交替。代码为两个预定观察点使用调整后的 Student-t critical values（n=3: 6.205347；n=5: 3.495405），降低反复看结果就挑停止时机的问题。该协议不是对所有并发、所有人群的无限次比较保证。</p>
+<p>固定 32-prompt HTTP 结果如下，单位都是百分比：</p>
+<table>
+<thead>
+<tr>
+<th>并发</th>
+<th style="text-align: right;">平均额外 wall time</th>
+<th>调整后区间</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td style="text-align: right;">-0.0479%</td>
+<td>[-0.9108%, 0.8150%]</td>
+</tr>
+<tr>
+<td>4</td>
+<td style="text-align: right;">-0.0567%</td>
+<td>[-0.5019%, 0.3886%]</td>
+</tr>
+<tr>
+<td>8</td>
+<td style="text-align: right;">+0.0109%</td>
+<td>[-0.6475%, 0.6693%]</td>
+</tr>
+</tbody>
+</table>
+<p>三个上界都小于 3%，所以这个范围内目标满足。负数点估计不能当成加速证明。reference、预热/首用时间和 retraction=0 等检查也属于证据，不能只摘出一张区间表。</p>
+<p>447-request 从头 reference 则回答另一个问题：在目标配置中，沿记录输出是否精确得到预期 IDs、长度与结束原因。它不重新定义记录答案的语义正确性。</p>
+<p>选读：<a href="../audit_dense_usage.py">audit_dense_usage.py</a>、<a href="../audit_dense_corpus.py">audit_dense_corpus.py</a>、<a href="../evidence/dense-overhead-02.json">evidence/dense-overhead-02.json</a>。暂缓完整 AgentX overhead，课程 08 解释 B2。</p></div></section><section class="chapter" id="chapter-8" aria-labelledby="title-8"><div class="chapter-label">FIELD NOTES / 09</div><h2 id="title-8">MoE 为什么必须把 recorder 和性能分开</h2><div class="prose"><p>状态：已展开概念与源码路线。读完应能解释：内容、专家路由、GPU 时间三者不能直接画等号。</p>
+<p>主链：真实/合成配对内容 → 相同长度与缓存结构 → recorder-off 性能 → recorder-on 路由 → 有限代表请求的 profiler 诊断。</p>
+<ol>
+<li>阅读 <a href="../prepare_synthetic.py">prepare_synthetic.py</a>：合成控制保留每个 session 的输入/输出长度、成对 prompt/full-response LCP、特殊 token 位置和 trace metadata，替换内容。</li>
+<li>阅读 <a href="../moe_workload.py">moe_workload.py</a> 的 <code>run_workload</code>：逐 session 固定顺序、zero-wait，请求逐个执行；session 间 flush；每请求核对 output IDs。这个独立服务实验不是 source arrival/DAG 的重现。</li>
+<li>阅读 <a href="../summarize_moe.py">summarize_moe.py</a>、<a href="../audit_moe_recorder.py">audit_moe_recorder.py</a>、<a href="../compare_recorder.py">compare_recorder.py</a>：性能、完整路由覆盖、记录器成本分开汇总。</li>
+<li>阅读 <a href="../compare_rank_profiles.py">compare_rank_profiles.py</a>：9/308 代表请求/内容的双 rank GPU interval 分类；它不是全 workload GPU timing。</li>
+</ol>
+<p>模型为 Qwen1.5-MoE-A2.7B-Chat BF16，revision <code>ec052fda178e241c7c443468d2fa1db6618996be</code>；TP2/EP2，固定 placement，EPLB off，shared experts 分开。A2.7B 表示激活参数量，并不表示所有权重只有 2.7B。</p>
+<p>每内容类型每 arm 为 308 requests、61931 output tokens、1913941 input tokens；缓存工作逐请求匹配。real/synthetic 的 recorder-off 吞吐差为 +0.2336%，95% t 区间 [-0.0285%, +0.4958%]，没有建立吞吐差异。</p>
+<p>路由分布确实不同：平均 layer TV distance，prefill=0.16887、decode=0.17926。但路由计数不是执行时间；跨 rank 复制的全局直方图只取 rank0 聚合，不能两 rank 相加。</p>
+<p>三组配对 recorder on/off 控制显示，记录器给 service time 带来约 21.16%（real）/21.20%（synthetic）额外开销。这是 MoE 路由 recorder，不是轻量 token replacement，不能拿来反驳或替代固定 HTTP 的 3% 结果。profiler-on 也是单独诊断。</p>
+<p>不同 stream/rank 的 compute/communication 区间可能重叠，类别区间并集不能直接相加成 wall time。只有 9 个代表请求时，更不能外推到全部 308 个。</p>
+<p>选读：<a href="../evidence/moe-service-routing-summary.json">MoE summary</a>、<a href="../evidence/moe-recorder-paired-summary.json">recorder paired summary</a>。暂缓更一般的路由因果分析，当前证据不支持它。</p></div></section><section class="chapter" id="chapter-9" aria-labelledby="title-9"><div class="chapter-label">FIELD NOTES / 10</div><h2 id="title-9">请求跑完了，为什么 L1 还能 UNCOVERED</h2><div class="prose"><p>状态：已展开概念与源码路线。读完应能解释：完成输出和真正走过恢复路径的区别。</p>
+<p>主链：部分输出 → 触发 retract → 同 RID reset → 重新调度/extend → 后续 decode → 完整输出与结束校验。</p>
+<ol>
+<li>阅读 <a href="../check_retraction_lifecycle.py">check_retraction_lifecycle.py</a> 的 <code>validate_packet</code>、<code>validate_request_events</code>、<code>validate_lifecycle</code>：wire 输出与 observer 两种证据互相核对，不能只凭日志有一个 retract 字样。</li>
+<li>看 <code>make_request</code>、<code>run_attempt</code>：每个 occurrence 用独立 RID；重复 ID 或互相前缀匹配的 ID 会被拒绝，避免误认其他请求的事件。保留 non-incremental streaming 的累计前缀约定；abort terminal packet 有单独处理。</li>
+<li>阅读 <a href="../check_pause_retract_lifecycle.py">check_pause_retract_lifecycle.py</a> 的 <code>run_pause_l1</code>：调用 pause/retract 与 continue 验证受控恢复。641-token 请求在已观察 8 tokens 后暂停，最终 641 IDs 全对。</li>
+<li>阅读 <a href="../check_natural_lifecycle.py">check_natural_lifecycle.py</a> 的 <code>check_natural_lifecycle</code>：先用共同 lifecycle validator，再要求同请求的 <code>trigger=kv_full</code> 出现在 reset 之前。receipt 自称 natural 不够。</li>
+</ol>
+<p>三类覆盖：L1 是同请求 retract/resume；L2 是普通/replay 混合 batch 的 filter/merge 映射；L3 是生成中取消、后端 abort、batch retirement 与取消后的普通/新 replay 请求正常。</p>
+<p>旧 c4/c8 有 <code>SGLANG_TEST_RETRACT=true</code>，而且目标长请求没有完整 reset/resume 链。非 speculative scheduler 优先 retract 当前输出较短的请求；“系统发生了很多 retract”不意味着目标长请求走过该链。后来的受控 pause 路径补了窄的 L1 正确性证据。</p>
+<p>自然规格为 <a href="../natural-kv-l1-20261109.spec.json">natural-kv-l1-20261109.spec.json</a>，由 <a href="../prepare_natural_lifecycle.py">prepare_natural_lifecycle.py</a> 的 <code>build_natural_spec</code> 生成；固定 seed=42、原 Dense vectors、最多 c4/c8 两次，单次窗口 600 秒，总分配含启动/收尾不超过 1800 秒，即单卡 0.5 GPU-hour。测试 retract 环境变量全部 unset，不调用 pause 造触发。</p>
+<p>自然 PASS 需要已消费前缀不变、恢复后的下一 output ID 正确、无重复/跳过/错位、最终 IDs/长度/finish reason 与 reference 一致。没有自然触发或缺链是 UNCOVERED；资源 guard 失败、实验没开始是 INCOMPLETE；发现实际不一致才是 FAIL。</p>
+<p>现状：原 gpu6 guard 发现占用，所以零次启动；自然 L1 仍 UNCOVERED。之前的受控 641-token PASS 继续有效，不升级为自然恢复证明。</p>
+<p>选读：<a href="../../../refine-logs/NATURAL_KV_L1_PLAN_20261109.md">自然实验计划</a>、<a href="../evidence/natural-kv-l1-20261109/guard-receipt.json">guard receipt</a>。阅读本文不需要运行模型服务。</p></div></section><section class="chapter" id="chapter-10" aria-labelledby="title-10"><div class="chapter-label">FIELD NOTES / 11</div><h2 id="title-10">怎样把实验变成别人能复查的交付</h2><div class="prose"><p>状态：已展开概念与源码路线。读完应能解释：退出码为零、验证通过、审阅接受是不同层次。</p>
+<p>主链：冻结代码/模型/数据 → 唯一 run/output/RID → 原始日志与 receipt → 归档与 hash → verifier → 报告与审阅边界。</p>
+<ol>
+<li>阅读 <a href="../README.md">README.md</a> 的 Code and environment：AgentX harness 1.0.13 基线 <code>60a094f256b42f55fde1efb3d45672e1d9a44566</code>、SGLang 0.5.10 基线 <code>1519acf</code>；两个依赖分别应用各自 patch。</li>
+<li>阅读 <a href="../evidence/model-content-manifest-20261106.json">模型 manifest</a>、<a href="../natural-kv-l1-20261109.manifest.json">自然 manifest</a> 和 <a href="../evidence/serving-source-parity.json">serving parity receipt</a>：记录实际字节。Dense checkpoint 无已验证 source revision，不能补写猜测 revision。</li>
+<li>阅读 <a href="../verify_delivery.py">verify_delivery.py</a> 的 <code>verify_delivery</code>：检查 36-cell grid、900 秒、源长度/计数、447 独立 reference 输出、MoE 308 覆盖、overhead/storage gates。它不启动模型，也不验证所有历史性能请求的每个 ID。</li>
+<li>按 README 将七个 raw archives 解压到临时 flat root，再运行 verifier；查 <a href="../../../refine-logs/REVIEW_SUMMARY.md">审阅总结</a> 区分 review scopes。</li>
+</ol>
+<p>固定环境曾使用 Python 3.12、torch 2.9.1+cu128、transformers 5.3.0、triton 3.5.1、FlashInfer 0.6.7.post2。patched harness wheel SHA-256 为 <code>9270c07b76981109a204a8c3b66cf706b501228ac194da3a9608e8a3a9676037</code>。这只是一个字节身份；所有相关 source、observer、model、vectors 的身份要读 manifest。</p>
+<p>source archive、wheel、实际 serving overlay 是不同产物；overlay 与补丁间记录过 format-only 差异及 AST parity。后续改 lifecycle/instrumentation 必须另作 freeze、source/wheel hash、针对性 review 与 deterministic checks；旧正面结论不自动继承。</p>
+<p>遇到过的真实失败也在交付里：Weka 16K 无合格 trace、YaRN 参数缺失、FlashInfer JIT 缺 <code>curand.h</code>、salt 传递遗漏、工具参数 double encoding、CUDA graph capture 启动停滞。缺 header 使用局部 <code>CPATH</code> 和独立编译 cache 修复，不把全局升级环境当成默认解法；CUDA graph 启动原因仍未解决，no-graph 正确性运行不证明性能。</p>
+<p>原始证据在 Git LFS。<code>git clone</code> 后文件可能只是 pointer，不能看文件名在就说 raw bytes 可读；先按仓库 LFS 方式获取所需对象。小脚本/spec 是普通源码，不能藏到临时目录或只放远端。</p>
+<h3>不启动 GPU 的学习检查</h3>
+<p>在项目根目录执行下面的只读查看命令：</p>
+<pre><code class="language-bash">git rev-parse --short HEAD
+git log -5 --oneline -- experimental/token_replay
+rg -n 'token_replay.apply|class TokenReplayBatch|def _replace_sampled_tokens' experimental/token_replay/sglang-v0.5.10.patch
+rg -n 'cache_salt|extra_key=recv_req.extra_key' experimental/token_replay/*.patch
+python3 experimental/token_replay/verify_delivery.py --help
+python3 experimental/token_replay/check_natural_lifecycle.py --help
+</code></pre>
+<p>完整离线交付验证直接使用 <a href="../README.md#evidence-processing">README 的七 archive staging 命令</a>。这需要 LFS 实体已下载和足够磁盘，但不需要占 GPU。本次学习材料整理没有重跑该验证；过去通过的 receipt 在 <a href="../evidence/delivery-verification.json">delivery-verification.json</a>。</p>
+<p>修改脚本后才按改动运行 <code>python3 -m py_compile &lt;changed-script.py&gt;</code>；提交前运行 <code>git diff --check</code>。编译成功只说明语法可编译，不等于模型行为正确。代码提交按函数级拆分；不夹带无关改动，不覆盖旧 run、validator 或失败日志。</p>
+<h3>B2 尚未做什么</h3>
+<p>B2 只有在需要扩大 overhead claim 时进入。先 CPU gate：从排序后合格 source identities 中用 <code>random.Random(42)</code> 选四个固定顺序 sessions；loaded sessions 和最多四个 profiling root admissions 分开。capture/generated/replay 的 <code>request.finished</code> instrumentation 必须对称，完整 ledger 标识 source file/row、phase、logical root/tree occurrence、turn、reset ordinal、cache-salt 等价类。</p>
+<p>每次 occurrence 都匹配 output IDs/length/cache-hit/new-prefill/ledger multiplicity；drain 满足 sent==completed，errors/skips/cancellations/pending 全零。任一 mismatch 就停止、保留证据，不修改 reference 迎合结果。</p>
+<p>CPU gate 通过才 capture 一次 immutable greedy reference、warmup/calibration 后做 c1 三组配对；区间触及 3% 扩至固定五组；总 GPU 预算 1.5 GPU-hours，含启动至 teardown。五组上界 &lt;=3% 才支持 instrumented AgentX c1 fixed-cohort overhead；五组区间跨阈值为 INCONCLUSIVE；预算/运行未完为 INCOMPLETE；gate/reference/instrumentation 不满足为 DEFERRED/FAIL。当前 B2 仍 DEFERRED，不能推广 c4/c8、source population 或无 instrumentation 完整 AgentX。</p>
+<h3>为什么小数据也可能放不进剩余显存</h3>
+<p>存储几 KB replay IDs 很便宜，整个模型服务仍需权重、KV pool、激活、workspace 与 runtime。冻结 natural spec 的 max_total_tokens=131072；若 Qwen2.5-7B KV 使用 FP16/BF16，以 28 层、4 KV heads、head_dim=128 估算：</p>
+<pre><code class="language-text">KV bytes/token = 2(K,V) × 28 × 4 × 128 × 2 bytes = 57344 bytes
+131072 tokens 对应约 7 GiB KV，仅是布局估算，不是实测 allocator 值。
+</code></pre>
+<p>所以 <code>gpu2</code> 剩余 5666 MiB 不足以照冻结规格启动，不是因为请求文件大。另一张设备报错卡也不能当空闲卡。<code>/ssd</code> 有空间与当前用户可写是两种检查。</p>
+<p>此前查询的 <code>csu-baseline</code> H200 是候选空闲单卡；这是会话中的资源快照，不是预留资源。迁移前重新 guard，另冻运行路径/GPU/硬件规格并验证模型与依赖可用性；不改旧 spec，不自动继承旧硬件上的性能结论。换 GPU 后也不能保证 greedy 数值轨迹逐项与旧设备相同，须按 reference 合同实际验证。</p></div></section><section class="chapter" id="chapter-11" aria-labelledby="title-11"><div class="chapter-label">FIELD NOTES / 12</div><h2 id="title-11">最后把状态词分清</h2><div class="prose"><table>
+<thead>
+<tr>
+<th>状态</th>
+<th>在这里怎么理解</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PASS</td>
+<td>指定断言具备完整且一致的实测证据</td>
+</tr>
+<tr>
+<td>FAIL</td>
+<td>实际检查发现违约或不一致</td>
+</tr>
+<tr>
+<td>UNCOVERED</td>
+<td>场景未触发或证据链不完整，不能判断该场景正确性</td>
+</tr>
+<tr>
+<td>INCOMPLETE</td>
+<td>执行/预算/资源条件未满足，目标工作未完成</td>
+</tr>
+<tr>
+<td>INCONCLUSIVE</td>
+<td>测量完成，但区间不能支持预设结论</td>
+</tr>
+<tr>
+<td>DEFERRED</td>
+<td>条件未到或范围决定暂不执行</td>
+</tr>
+<tr>
+<td>provisional</td>
+<td>Codex 同家族正面审阅的边界，不是跨家族 accepted</td>
+</tr>
+</tbody>
+</table></div></section><section class="chapter" id="chapter-12" aria-labelledby="title-12"><div class="chapter-label">FIELD NOTES / 13</div><h2 id="title-12">建议阅读顺序</h2><div class="prose"><p>先读 0–2 节了解项目全貌，再按课程 01→04 理解数据、调度、token 替换和缓存；课程 05→08 解释实验、生命周期与交付。源码链接供需要时查阅，不必一开始逐个打开。</p>
+<p>遇到陌生概念可以停在对应章节继续看解释，不需要提交答案或完成任务。本文按工程流程组织，具体函数也可以单独展开讲解。</p></div></section></div><footer class="footer">学习材料基于源码 7583033 与已记录实验整理，非新增实验或实时资源状态。Codex review provisional；Claude unavailable；无双审通过、上游正式接受或官方 benchmark score。<br>AgentX / Token Replay · 可离线阅读，无外部脚本、字体或统计请求。</footer></main><button class="back-top" aria-label="返回页首">↑ 页首</button>
+<script>
+const stageData=[['记录 → 目标模型的整数序列','源对话先经目标 tokenizer 和 chat template 转换，得到成对的 input_ids / output_ids。数据资格审查确保完整请求能放进上下文，保留来源和排除原因。'],['AgentX → 原有请求调度','harness 保留 warmup、snapshot、父子请求与 join。完整 prompt IDs 通过 HTTP 发出，同一 tree 共享 cache salt，独立 tree 相互隔离。'],['SGLang → forward，再 sampling','模型照常做 embedding lookup、注意力计算和采样。replay 没有跳过这些计算，也不是直接把记录答案返回给客户端。'],['采样之后 → 替换 next token ID','recorded 模式在 GPU 上把本步采样结果替换成记录 ID，然后进入 logprob reporting 和后续计算。下一步沿记录轨迹前进，才有机会复用对应的缓存前缀。'],['输出 → 可复查的工程证据','核对 output IDs、长度、finish reason 和 cache work。正确性、缓存效果、HTTP overhead、生命周期覆盖分别验证，保留 raw logs、hash、失败结果和明确的结论边界。']];
+function selectStage(index){document.querySelectorAll('[data-stage]').forEach(b=>{const active=Number(b.dataset.stage)===index;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});document.querySelector('#stage-title').textContent=stageData[index][0];document.querySelector('#stage-body').textContent=stageData[index][1]}
+document.querySelectorAll('[data-stage]').forEach(b=>b.addEventListener('click',()=>selectStage(Number(b.dataset.stage))));selectStage(0);
+const modeData={normal:{shown:['10','99','…'],internal:['10','99','…'],text:'模型选中 99，下一步沿包含 99 的历史继续。后续轨迹可能与记录不同，因此后面的记录 prompt 不一定能复用完整前缀。'},display:{shown:['10','20','…'],internal:['10','99','…'],text:'客户端把 99 显示成 20，但服务端并不知道。下一步仍沿 99 计算。显示一致并没有让内部计算轨迹一致。'},replay:{shown:['10','20','30'],internal:['10','20','30'],text:'正常采样之后，服务端及时把 99 替换成 20。后续计算沿记录 ID 继续；第三步同样使用记录 ID。这个示意只解释机制，不表示跳过模型计算或浮点 KV 逐 bit 相同。'}};
+function tokenRow(values,mode){return values.map((v,i)=>'<span class="token '+(i===1?(v==='99'?'wrong':mode==='replay'?'fixed':''):'')+'">'+v+'</span>').join('<span class="arrow">→</span>')}
+function selectMode(mode){const d=modeData[mode];document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mode===mode)));document.querySelector('#visible-tokens').innerHTML=tokenRow(d.shown,mode);document.querySelector('#internal-tokens').innerHTML=tokenRow(d.internal,mode);document.querySelector('#mode-explain').textContent=d.text}
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>selectMode(b.dataset.mode)));selectMode('normal');
+const search=document.querySelector('#search'),chapters=[...document.querySelectorAll('.chapter')],navLinks=[...document.querySelectorAll('nav a')];
+search.addEventListener('input',()=>{const q=search.value.trim().toLocaleLowerCase();let count=0;chapters.forEach(c=>{const match=!q||c.textContent.toLocaleLowerCase().includes(q);c.hidden=!match;const a=navLinks.find(a=>a.hash==='#'+c.id);if(a)a.hidden=!match;if(match)count++});document.querySelector('.no-results').hidden=count!==0});
+const menu=document.querySelector('.menu');menu.addEventListener('click',()=>{const open=document.body.classList.toggle('menu-open');menu.setAttribute('aria-expanded',String(open))});navLinks.forEach(a=>a.addEventListener('click',()=>{document.body.classList.remove('menu-open');menu.setAttribute('aria-expanded','false')}));document.querySelector('main').addEventListener('click',e=>{if(!e.target.closest('.menu')){document.body.classList.remove('menu-open');menu.setAttribute('aria-expanded','false')}});
+const observer=new IntersectionObserver(entries=>{for(const e of entries){if(e.isIntersecting){navLinks.forEach(a=>{const active=a.hash==='#'+e.target.id;a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current')})}}},{rootMargin:'-5% 0px -65% 0px'});chapters.forEach(c=>observer.observe(c));observer.observe(document.querySelector('#overview'));
+function progress(){const max=document.documentElement.scrollHeight-innerHeight;document.querySelector('.progress').style.width=(max>0?(scrollY/max)*100:0)+'%'}addEventListener('scroll',progress,{passive:true});addEventListener('resize',progress);progress();document.querySelector('.back-top').addEventListener('click',()=>scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'}));
+</script></body></html>
