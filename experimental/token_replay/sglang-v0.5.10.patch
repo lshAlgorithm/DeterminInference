@@ -1,0 +1,370 @@
+diff --git a/python/sglang/srt/entrypoints/openai/protocol.py b/python/sglang/srt/entrypoints/openai/protocol.py
+index c40bd37..d9a1921 100644
+--- a/python/sglang/srt/entrypoints/openai/protocol.py
++++ b/python/sglang/srt/entrypoints/openai/protocol.py
+@@ -32,6 +32,7 @@ from openai.types.responses.tool import Tool
+ from pydantic import (
+     BaseModel,
+     Field,
++    StrictInt,
+     field_validator,
+     model_serializer,
+     model_validator,
+@@ -287,6 +288,7 @@ class CompletionRequest(BaseModel):
+     stop_regex: Optional[Union[str, List[str]]] = None
+     no_stop_trim: bool = False
+     ignore_eos: bool = False
++    replay_token_ids: Optional[List[StrictInt]] = None
+     skip_special_tokens: bool = True
+     lora_path: Optional[Union[List[Optional[str]], Optional[str]]] = None
+     session_params: Optional[Dict] = None
+diff --git a/python/sglang/srt/entrypoints/openai/serving_completions.py b/python/sglang/srt/entrypoints/openai/serving_completions.py
+index 9d089fc..dd2ef0d 100644
+--- a/python/sglang/srt/entrypoints/openai/serving_completions.py
++++ b/python/sglang/srt/entrypoints/openai/serving_completions.py
+@@ -157,6 +157,7 @@ class OpenAIServingCompletion(OpenAIServingBase):
+             "skip_special_tokens": request.skip_special_tokens,
+             "logit_bias": request.logit_bias,
+             "custom_params": request.custom_params,
++            "replay_token_ids": request.replay_token_ids,
+             "sampling_seed": request.seed,
+         }
+ 
+diff --git a/python/sglang/srt/layers/sampler.py b/python/sglang/srt/layers/sampler.py
+index e947a48..fa42f7e 100644
+--- a/python/sglang/srt/layers/sampler.py
++++ b/python/sglang/srt/layers/sampler.py
+@@ -169,6 +169,9 @@ class Sampler(nn.Module):
+                     )
+                 del probs
+ 
++        if sampling_info.token_replay is not None:
++            sampling_info.token_replay.apply(batch_next_token_ids, positions)
++
+         # Attach logprobs to logits_output (in-place modification)
+         if return_logprob:
+             if SGLANG_RETURN_ORIGINAL_LOGPROB:
+diff --git a/python/sglang/srt/managers/scheduler.py b/python/sglang/srt/managers/scheduler.py
+index 67af2d0..e7629dd 100644
+--- a/python/sglang/srt/managers/scheduler.py
++++ b/python/sglang/srt/managers/scheduler.py
+@@ -1610,13 +1610,25 @@ class Scheduler(
+         self._check_pending_flush()
+ 
+     def init_req_max_new_tokens(self, req):
++        available_tokens = self.max_req_len - len(req.origin_input_ids) - 1
++        if (
++            req.sampling_params.replay_token_ids is not None
++            and (
++                len(req.sampling_params.replay_token_ids) > available_tokens
++                or len(req.origin_input_ids) >= self.max_req_input_len
++            )
++        ):
++            req.set_finish_with_abort(
++                "token replay exceeds the scheduler's full-trace token budget"
++            )
++            return
+         req.sampling_params.max_new_tokens = min(
+             (
+                 req.sampling_params.max_new_tokens
+                 if req.sampling_params.max_new_tokens is not None
+                 else 1 << 30
+             ),
+-            self.max_req_len - len(req.origin_input_ids) - 1,
++            available_tokens,
+         )
+ 
+     def _process_and_broadcast_mm_inputs(
+@@ -1767,6 +1779,7 @@ class Scheduler(
+                 disagg_prefill_dp_rank=recv_req.disagg_prefill_dp_rank,
+                 vocab_size=self.model_config.vocab_size,
+                 priority=recv_req.priority,
++                extra_key=recv_req.extra_key,
+                 metrics_collector=(
+                     self.metrics_collector if self.enable_metrics else None
+                 ),
+@@ -3078,6 +3091,17 @@ class Scheduler(
+         }
+         ret["effective_max_running_requests_per_dp"] = self.max_running_requests
+ 
++        if isinstance(self.tree_cache, RadixCache):
++            evictable = self.tree_cache.evictable_size()
++            protected = self.tree_cache.protected_size()
++            ret["cache_residency"] = {
++                "prefix_resident_tokens": evictable + protected,
++                "evictable_tokens": evictable,
++                "protected_prefix_tokens": protected,
++                "allocated_kv_tokens": self.max_total_num_tokens
++                - self.token_to_kv_pool_allocator.available_size(),
++            }
++
+         if not self.spec_algorithm.is_none() and self.spec_total_num_forward_ct > 0:
+             ret["avg_spec_accept_length"] = (
+                 self.spec_total_num_accepted_tokens / self.spec_total_num_forward_ct
+diff --git a/python/sglang/srt/managers/tokenizer_manager.py b/python/sglang/srt/managers/tokenizer_manager.py
+index 8142432..6da9c2b 100644
+--- a/python/sglang/srt/managers/tokenizer_manager.py
++++ b/python/sglang/srt/managers/tokenizer_manager.py
+@@ -791,6 +791,12 @@ class TokenizerManager(TokenizerCommunicatorMixin, TokenizerManagerScoreMixin):
+         input_token_num = len(input_ids) if input_ids is not None else 0
+         input_token_num += self.num_reserved_tokens
+ 
++        replay_ids = obj.sampling_params.get("replay_token_ids")
++        if replay_ids is not None and (
++            not input_ids or input_token_num + len(replay_ids) > self.context_len - 2
++        ):
++            raise ValueError("token replay must fit the full trace without truncation")
++
+         # Validate input length
+         if input_token_num >= self.context_len:
+             if self.server_args.allow_auto_truncate:
+@@ -945,6 +951,15 @@ class TokenizerManager(TokenizerCommunicatorMixin, TokenizerManagerScoreMixin):
+         sampling_params = self.sampling_params_class(**sampling_kwargs)
+         sampling_params.normalize(self.tokenizer)
+         sampling_params.verify(self.model_config.vocab_size)
++        if sampling_params.replay_token_ids is not None:
++            if self.server_args.speculative_algorithm:
++                raise ValueError("token replay does not support speculative decoding")
++            if mm_inputs is not None or input_embeds is not None:
++                raise ValueError("token replay requires text token IDs")
++            if not input_ids or len(input_ids) + sampling_params.max_new_tokens > self.context_len:
++                raise ValueError("token replay requires a nonempty prompt and a fitting full trace")
++            if obj.custom_logit_processor is not None:
++                raise ValueError("token replay does not support custom logit processors")
+ 
+         # Build return object
+         if isinstance(obj, GenerateReqInput):
+diff --git a/python/sglang/srt/sampling/sampling_batch_info.py b/python/sglang/srt/sampling/sampling_batch_info.py
+index 885936b..651173d 100644
+--- a/python/sglang/srt/sampling/sampling_batch_info.py
++++ b/python/sglang/srt/sampling/sampling_batch_info.py
+@@ -10,6 +10,7 @@ import sglang.srt.sampling.penaltylib as penaltylib
+ from sglang.srt.sampling.custom_logit_processor import CustomLogitProcessor
+ from sglang.srt.sampling.penaltylib.repetition_penalty import apply_scaling_penalties
+ from sglang.srt.sampling.sampling_params import TOP_K_ALL
++from sglang.srt.sampling.token_replay import TokenReplayBatch
+ from sglang.srt.server_args import get_global_server_args
+ 
+ if TYPE_CHECKING:
+@@ -63,6 +64,7 @@ class SamplingBatchInfo:
+ 
+     # Used for deterministic sampling
+     sampling_seed: Optional[torch.Tensor] = None
++    token_replay: Optional[TokenReplayBatch] = None
+ 
+     # Device
+     device: str = "cuda"
+@@ -173,6 +175,7 @@ class SamplingBatchInfo:
+             top_ks=top_ks,
+             min_ps=min_ps,
+             sampling_seed=sampling_seed,
++            token_replay=TokenReplayBatch.from_requests(reqs, device),
+             is_all_greedy=all(r.sampling_params.top_k <= 1 for r in reqs),
+             need_top_p_sampling=any(r.sampling_params.top_p != 1.0 for r in reqs),
+             need_top_k_sampling=any(r.sampling_params.top_k != TOP_K_ALL for r in reqs),
+@@ -270,6 +273,8 @@ class SamplingBatchInfo:
+ 
+     def filter_batch(self, keep_indices: List[int], keep_indices_device: torch.Tensor):
+         self.penalizer_orchestrator.filter(keep_indices_device)
++        if self.token_replay is not None:
++            self.token_replay = self.token_replay.filter(keep_indices_device, keep_indices)
+ 
+         if self.has_custom_logit_processor:
+             self._filter_batch_custom_logit_processor(keep_indices, keep_indices_device)
+@@ -352,6 +357,9 @@ class SamplingBatchInfo:
+ 
+     def merge_batch(self, other: "SamplingBatchInfo"):
+         self.penalizer_orchestrator.merge(other.penalizer_orchestrator)
++        self.token_replay = TokenReplayBatch.merge(
++            self.token_replay, other.token_replay, len(self), len(other), self.device
++        )
+ 
+         # Merge the custom logit processors and custom params lists
+         if self.has_custom_logit_processor or other.has_custom_logit_processor:
+diff --git a/python/sglang/srt/sampling/sampling_params.py b/python/sglang/srt/sampling/sampling_params.py
+index a7f4c66..822b5e0 100644
+--- a/python/sglang/srt/sampling/sampling_params.py
++++ b/python/sglang/srt/sampling/sampling_params.py
+@@ -64,6 +64,7 @@ class SamplingParams:
+         stream_interval: Optional[int] = None,
+         logit_bias: Optional[Dict[str, float]] = None,
+         sampling_seed: Optional[int] = None,
++        replay_token_ids: Optional[List[int]] = None,
+     ) -> None:
+         self.max_new_tokens = max_new_tokens
+         self.stop_strs = stop
+@@ -93,6 +94,7 @@ class SamplingParams:
+         self.stream_interval = stream_interval
+         self.logit_bias = logit_bias
+         self.sampling_seed = sampling_seed
++        self.replay_token_ids = replay_token_ids
+ 
+         # Process some special cases
+         if 0 <= self.temperature < _SAMPLING_EPS:
+@@ -103,6 +105,36 @@ class SamplingParams:
+             self.top_k = TOP_K_ALL  # whole vocabulary
+ 
+     def verify(self, vocab_size):
++        if self.replay_token_ids is not None:
++            if not isinstance(self.replay_token_ids, list) or not self.replay_token_ids:
++                raise ValueError(
++                    "replay_token_ids must be a non-empty list of token IDs"
++                )
++            if any(
++                type(t) is not int or not 0 <= t < vocab_size
++                for t in self.replay_token_ids
++            ):
++                raise ValueError(
++                    "replay_token_ids contains a token outside the vocabulary"
++                )
++            if self.max_new_tokens != len(self.replay_token_ids):
++                raise ValueError(
++                    "max_new_tokens must equal the recorded response length"
++                )
++            if (
++                not self.ignore_eos
++                or self.stop_strs
++                or self.stop_regex_strs
++                or self.stop_token_ids
++            ):
++                raise ValueError(
++                    "token replay requires ignore_eos and no stop conditions"
++                )
++            if any(
++                v is not None
++                for v in (self.json_schema, self.regex, self.ebnf, self.structural_tag)
++            ):
++                raise ValueError("token replay does not support constrained decoding")
+         if self.temperature < 0.0:
+             raise ValueError(
+                 f"temperature must be non-negative, got {self.temperature}."
+@@ -117,17 +149,15 @@ class SamplingParams:
+             )
+         if not -2.0 <= self.frequency_penalty <= 2.0:
+             raise ValueError(
+-                "frequency_penalty must be in [-2, 2], got "
+-                f"{self.frequency_penalty}."
++                f"frequency_penalty must be in [-2, 2], got {self.frequency_penalty}."
+             )
+         if not -2.0 <= self.presence_penalty <= 2.0:
+             raise ValueError(
+-                "presence_penalty must be in [-2, 2], got " f"{self.presence_penalty}."
++                f"presence_penalty must be in [-2, 2], got {self.presence_penalty}."
+             )
+         if not 0.0 <= self.repetition_penalty <= 2.0:
+             raise ValueError(
+-                "repetition_penalty must be in [0, 2], got "
+-                f"{self.repetition_penalty}."
++                f"repetition_penalty must be in [0, 2], got {self.repetition_penalty}."
+             )
+         if not 0 <= self.min_new_tokens:
+             raise ValueError(
+diff --git a/python/sglang/srt/sampling/token_replay.py b/python/sglang/srt/sampling/token_replay.py
+new file mode 100644
+index 0000000..24532b7
+--- /dev/null
++++ b/python/sglang/srt/sampling/token_replay.py
+@@ -0,0 +1,103 @@
++from dataclasses import dataclass
++from typing import Optional
++
++import torch
++import triton
++import triton.language as tl
++
++
++@triton.jit
++def _replace_sampled_tokens(
++    sampled,
++    metadata,
++    positions,
++    batch_size: tl.constexpr,
++    BLOCK: tl.constexpr,
++):
++    rows = tl.program_id(0) * BLOCK + tl.arange(0, BLOCK)
++    valid = rows < batch_size
++    address = tl.load(metadata + rows * 3, valid, 0)
++    length = tl.load(metadata + rows * 3 + 1, valid, 0)
++    prompt_length = tl.load(metadata + rows * 3 + 2, valid, 0)
++    step = tl.load(positions + rows, valid, 0) - prompt_length + 1
++    replace = valid & (step >= 0) & (step < length)
++    recorded = tl.load(address.to(tl.pointer_type(tl.int64)) + step, replace, 0)
++    tl.store(sampled + rows, recorded, replace)
++
++
++@dataclass
++class TokenReplayBatch:
++    tokens: tuple[Optional[torch.Tensor], ...]
++    metadata: torch.Tensor
++
++    @classmethod
++    def from_requests(cls, reqs: list, device: str) -> Optional["TokenReplayBatch"]:
++        sequences = [r.sampling_params.replay_token_ids for r in reqs]
++        if not any(s is not None for s in sequences):
++            return None
++        packed = torch.tensor(
++            [
++                token
++                for sequence in sequences
++                if sequence is not None
++                for token in sequence
++            ],
++            dtype=torch.int64,
++            device=device,
++        )
++        tokens, metadata = [], []
++        offset = 0
++        for req, sequence in zip(reqs, sequences):
++            length = len(sequence) if sequence is not None else 0
++            view = packed[offset : offset + length] if length else None
++            tokens.append(view)
++            metadata.append(
++                [
++                    view.data_ptr() if view is not None else 0,
++                    length,
++                    len(req.origin_input_ids),
++                ]
++            )
++            offset += length
++        return cls(
++            tuple(tokens), torch.tensor(metadata, dtype=torch.int64, device=device)
++        )
++
++    def filter(
++        self, indices: torch.Tensor, keep_indices: list[int]
++    ) -> Optional["TokenReplayBatch"]:
++        tokens = tuple(self.tokens[i] for i in keep_indices)
++        if not any(token is not None for token in tokens):
++            return None
++        return TokenReplayBatch(tokens, self.metadata[indices])
++
++    @staticmethod
++    def merge(
++        left: Optional["TokenReplayBatch"],
++        right: Optional["TokenReplayBatch"],
++        left_size: int,
++        right_size: int,
++        device: str,
++    ) -> Optional["TokenReplayBatch"]:
++        if left is None and right is None:
++            return None
++        tokens, metadata = [], []
++        for batch, size in ((left, left_size), (right, right_size)):
++            if batch is None:
++                tokens.extend([None] * size)
++                metadata.append(
++                    torch.zeros((size, 3), dtype=torch.int64, device=device)
++                )
++            else:
++                tokens.extend(batch.tokens)
++                metadata.append(batch.metadata)
++        return TokenReplayBatch(tuple(tokens), torch.cat(metadata))
++
++    def apply(self, sampled: torch.Tensor, positions: torch.Tensor) -> None:
++        _replace_sampled_tokens[(triton.cdiv(sampled.numel(), 128),)](
++            sampled,
++            self.metadata,
++            positions,
++            sampled.numel(),
++            128,
++        )
