@@ -146,6 +146,11 @@ def execute(plan: Plan, runtime: Runtime, environ: Mapping[str, str]) -> int:
 
 def _download_traces(cfg: ReplayConfig, runtime: Runtime, env: Mapping[str, str]) -> int:
     """Download ``cfg``'s trace dataset with the runtime's ``hf`` and return its status."""
+    if cfg.token_trace is not None:
+        if not cfg.token_trace.exists():
+            raise inputs.BenchError(f"token trace is missing: {cfg.token_trace}")
+        print(f"Using local token trace: {cfg.token_trace}", flush=True)
+        return 0
     print(f"Loading traces via aiperf public-dataset: {cfg.loader} ({cfg.dataset})", flush=True)
     rc = proc.call([str(runtime.hf), "download", "--repo-type", "dataset", cfg.dataset], env)
     if rc:

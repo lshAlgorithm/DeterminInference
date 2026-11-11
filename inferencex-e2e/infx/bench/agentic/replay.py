@@ -53,6 +53,9 @@ class ReplayConfig:
     apply_chat_template: bool
     benchmark_grace_period: str | None
 
+    token_trace: Path | None = None
+    num_sessions: int | None = None
+
     @classmethod
     def from_env(cls, env: Mapping[str, str], result_dir: Path) -> ReplayConfig:
         """Validate the replay inputs in ``env``; artifacts go below ``result_dir``."""
@@ -70,12 +73,37 @@ class ReplayConfig:
         loader, dataset = traces.resolve(
             values["MODEL_PREFIX"], inputs.optional("WEKA_LOADER_OVERRIDE", env)
         )
+        token_trace = inputs.optional("AGENTX_TOKEN_TRACE", env)
+        mode = inputs.optional("AGENTX_REPLAY_MODE", env)
+        num_sessions = inputs.optional("AGENTX_NUM_SESSIONS", env)
+        if num_sessions and not token_trace:
+            raise inputs.InputError("AGENTX_NUM_SESSIONS requires a local token experiment")
+        concurrency = inputs.parse_positive_int("CONC", values["CONC"])
+        session_limit = (
+            inputs.parse_positive_int("AGENTX_NUM_SESSIONS", num_sessions)
+            if num_sessions is not None
+            else None
+        )
+        if session_limit is not None and session_limit < concurrency:
+            raise inputs.InputError("AGENTX_NUM_SESSIONS must be at least CONC")
+        if token_trace or mode:
+            if not token_trace or mode not in {"generated", "recorded"}:
+                raise inputs.InputError(
+                    "AGENTX_TOKEN_TRACE and AGENTX_REPLAY_MODE=generated|recorded are required together"
+                )
+            inputs.require("AGENTX_HARNESS_WHEEL", "AGENTX_HARNESS_SHA256", env=env)
+            if "sglang" not in values["FRAMEWORK"]:
+                raise inputs.InputError("token experiments require the patched SGLang backend")
+            if not Path(token_trace).exists():
+                raise inputs.InputError(f"AGENTX_TOKEN_TRACE does not exist: {token_trace}")
+            if env.get("AIPERF_APPLY_CHAT_TEMPLATE") == "true":
+                raise inputs.InputError("recorded prompt IDs already include the chat template")
         extra_inputs = inputs.optional("AIPERF_EXTRA_INPUTS", env) or ""
         return cls(
             url=server_url(env),
             model=inputs.optional("SERVED_MODEL_NAME", env) or values["MODEL"],
             tokenizer=inputs.optional("TOKENIZER", env) or values["MODEL"],
-            concurrency=inputs.parse_positive_int("CONC", values["CONC"]),
+            concurrency=concurrency,
             duration=duration,
             warmup_requests_per_lane=warmup,
             live_failed_request_threshold=inputs.optional(
@@ -98,6 +126,8 @@ class ReplayConfig:
             dataset=dataset,
             apply_chat_template=env.get("AIPERF_APPLY_CHAT_TEMPLATE") == "true",
             benchmark_grace_period=inputs.optional("AIPERF_BENCHMARK_GRACE_PERIOD", env),
+            token_trace=Path(token_trace).absolute() if token_trace else None,
+            num_sessions=session_limit,
         )
 
 
@@ -143,6 +173,8 @@ def replay_argv(cfg: ReplayConfig, cli: str | Path) -> list[str]:
     argv = [str(cli), "profile", "--url", cfg.url]
     argv += ["--model", cfg.model, "--tokenizer", cfg.tokenizer]
     argv += ["--concurrency", str(cfg.concurrency), "--benchmark-duration", str(cfg.duration)]
+    if cfg.num_sessions is not None:
+        argv += ["--num-sessions", str(cfg.num_sessions)]
     if cfg.live_failed_request_threshold is not None:
         argv += ["--failed-request-threshold", cfg.live_failed_request_threshold]
     if cfg.warmup_requests_per_lane is not None:
@@ -162,7 +194,13 @@ def replay_argv(cfg: ReplayConfig, cli: str | Path) -> list[str]:
     argv += ["--output-artifact-dir", str(cfg.artifact_dir)]
     if cfg.unsafe_override:
         argv.append("--unsafe-override")
-    argv += ["--public-dataset", cfg.loader]
+    if cfg.token_trace is None:
+        argv += ["--public-dataset", cfg.loader]
+    else:
+        argv += ["--input-file", str(cfg.token_trace), "--custom-dataset-type", "weka_trace"]
+        argv += ["--endpoint-type", "sglang-token-completions", "--random-seed", "42"]
+        if "--unsafe-override" not in argv:
+            argv.append("--unsafe-override")
     if cfg.apply_chat_template:
         argv.append("--apply-chat-template")
     if cfg.benchmark_grace_period is not None:

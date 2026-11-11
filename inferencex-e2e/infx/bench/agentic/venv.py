@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import sys
@@ -86,6 +87,20 @@ def bootstrap(runtime: Runtime) -> int:
             "benchmark client dependency bootstrap failed; inspect network/package "
             "resolution before recipe repairs"
         )
+    wheel = os.environ.get("AGENTX_HARNESS_WHEEL")
+    if wheel:
+        expected = os.environ.get("AGENTX_HARNESS_SHA256", "")
+        path = Path(wheel).absolute()
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if actual != expected:
+            raise BenchError("AGENTX_HARNESS_SHA256 does not match the supplied wheel")
+        if not path.name.startswith("agentx_harness-1.0.13-") or path.suffix != ".whl":
+            raise BenchError("patched harness must be an agentx-harness 1.0.13 wheel")
+        if proc.call([*install[:6], "--reinstall", "--no-deps", str(path)], env):
+            raise BenchError("patched AgentX wheel installation failed")
+        (runtime.root / "harness-wheel.sha256").write_text(f"{actual}  {path}\n")
+    elif os.environ.get("AGENTX_REPLAY_MODE") or os.environ.get("AGENTX_TOKEN_TRACE"):
+        raise BenchError("token experiments require AGENTX_HARNESS_WHEEL")
     if not (_executable(runtime.agentx) and _executable(runtime.hf)):
         raise BenchError(f"isolated AgentX environment is incomplete at {runtime.venv}")
     return 0
