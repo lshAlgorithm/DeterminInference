@@ -302,3 +302,66 @@ def check_mixed(url: str, prompt: list[int], ledger: TextIO) -> dict:
         "ordinary_after_replay": "passed",
     }
 
+
+def main(protocol: Path) -> None:
+    frozen = json.loads(protocol.read_text())
+    suite = os.environ["REPLAY_VALIDATION_SUITE"]
+    config = frozen["suites"][suite]
+    url = os.environ["AIPERF_SERVER_URL"]
+    output = Path(os.environ["RESULT_DIR"]) / "result.json"
+    if output.exists():
+        raise FileExistsError(output)
+    report = {
+        "seed": SEED,
+        "suite": suite,
+        "complete": False,
+        "scope": "fixed text, batched HTTP, matched outputs and cache work; no AgentX workload claim",
+        "protocol": config,
+        "cells": [],
+    }
+    with output.with_suffix(".requests.jsonl").open("x") as ledger:
+        try:
+            prompt = post(url, "/tokenize", {"prompt": PROMPT})["tokens"]
+            suffix = post(
+                url, "/tokenize", {"prompt": SUFFIX, "add_special_tokens": False}
+            )["tokens"]
+            report["prompt_ids"] = prompt
+            for cell in config["cells"]:
+                try:
+                    run_cell(url, prompt, suffix, config, cell, ledger, report, output)
+                except Exception as error:
+                    report.setdefault("errors", []).append(
+                        {"cell": cell, "error": repr(error)}
+                    )
+                output.write_text(json.dumps(report, indent=2) + "\n")
+            report["mixed_and_isolation"] = check_mixed(url, prompt, ledger)
+            report["complete"] = True
+            report["passed"] = (
+                not report.get("errors")
+                and len(report["cells"]) == len(config["cells"])
+                and all(cell.get("passed", False) for cell in report["cells"])
+            )
+        except Exception as error:
+            report["error"] = repr(error)
+            raise
+        finally:
+            output.write_text(json.dumps(report, indent=2) + "\n")
+    print(
+        json.dumps(
+            {
+                "complete": report["complete"],
+                "passed": report["passed"],
+                "cells": [
+                    {"name": cell["name"], "metric": cell.get("primary_metric")}
+                    for cell in report["cells"]
+                ],
+            },
+            indent=2,
+        )
+    )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--protocol", type=Path, required=True)
+    main(parser.parse_args().protocol)
