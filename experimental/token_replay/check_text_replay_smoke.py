@@ -94,3 +94,76 @@ def test_exact_output(
 
     return recorded, {"passed": True, "output_tokens": len(recorded)}
 
+
+def measure_pairs(
+    url: str,
+    prompt_ids: list[int],
+    recorded: list[int],
+    pair_count: int,
+    requests_per_arm: int,
+    warmup_pairs: int,
+    ledger: TextIO,
+    report: dict,
+    output: Path,
+) -> None:
+    pairs = report["primary_metric"]["pairs"]
+    for index in range(-warmup_pairs, pair_count):
+        pair = {"index": index, "arms": {}}
+        order = ("ordinary", "replay") if index % 2 == 0 else ("replay", "ordinary")
+        for mode in order:
+            requests = []
+            for request_index in range(requests_per_arm):
+                post(url, "/flush_cache")
+                result, seconds = generate(
+                    url,
+                    prompt_ids,
+                    len(recorded),
+                    recorded if mode == "replay" else None,
+                    ledger,
+                    {
+                        "phase": "warmup" if index < 0 else "measured",
+                        "pair": index,
+                        "mode": mode,
+                        "request": request_index,
+                    },
+                )
+                meta = result["meta_info"]
+                requests.append(
+                    {
+                        "seconds": seconds,
+                        "server_seconds": meta.get("e2e_latency"),
+                        "output_ids_match": result["output_ids"] == recorded,
+                        "work_matches": (
+                            meta["cached_tokens"] == 0
+                            and meta["prompt_tokens"] == len(prompt_ids)
+                            and meta["completion_tokens"] == len(recorded)
+                            and meta["finish_reason"]["type"] == "length"
+                            and meta["total_retractions"] == 0
+                        ),
+                    }
+                )
+            server_times = [request["server_seconds"] for request in requests]
+            pair["arms"][mode] = {
+                "seconds": sum(request["seconds"] for request in requests),
+                "server_seconds": (
+                    sum(server_times)
+                    if all(value is not None for value in server_times)
+                    else None
+                ),
+                "requests": requests,
+            }
+        ordinary, replay = pair["arms"]["ordinary"], pair["arms"]["replay"]
+        pair["overhead_fraction"] = replay["seconds"] / ordinary["seconds"] - 1
+        pair["server_overhead_fraction"] = (
+            replay["server_seconds"] / ordinary["server_seconds"] - 1
+            if ordinary["server_seconds"] and replay["server_seconds"]
+            else None
+        )
+        pair["valid"] = all(
+            request["output_ids_match"] and request["work_matches"]
+            for arm in pair["arms"].values()
+            for request in arm["requests"]
+        )
+        (report["warmup_pairs"] if index < 0 else pairs).append(pair)
+        output.write_text(json.dumps(report, indent=2) + "\n")
+
