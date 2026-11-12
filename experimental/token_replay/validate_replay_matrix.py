@@ -92,3 +92,37 @@ def check_rows(
     )
     return {"ids_match": ids_ok, "work_match": work_ok}
 
+
+def estimate(pairs: list[dict], critical: float, target: float) -> dict:
+    values = [pair["overhead_fraction"] for pair in pairs]
+    mean = statistics.mean(values)
+    half = critical * statistics.stdev(values) / math.sqrt(len(values))
+    valid = all(pair["valid"] for pair in pairs)
+    return {
+        "name": "replay_http_wall_time_overhead",
+        "unit": "fraction",
+        "definition": "replay batch wall time / ordinary batch wall time - 1",
+        "mean": mean,
+        "interval": [mean - half, mean + half],
+        "critical": critical,
+        "valid": valid,
+        "target_fraction": target,
+        "min_pair": min(values),
+        "max_pair": max(values),
+        "status": (
+            "invalid"
+            if not valid
+            else "pass"
+            if mean + half <= target
+            else "fail"
+            if mean - half > target
+            else "inconclusive"
+        ),
+        "ordinary_id_mismatch_pairs": sum(
+            not p["arms"]["ordinary"]["ids_match"] for p in pairs
+        ),
+        "replay_id_mismatch_pairs": sum(
+            not p["arms"]["replay"]["ids_match"] for p in pairs
+        ),
+    }
+
