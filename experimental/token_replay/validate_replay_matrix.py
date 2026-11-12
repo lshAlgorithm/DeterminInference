@@ -126,3 +126,52 @@ def estimate(pairs: list[dict], critical: float, target: float) -> dict:
         ),
     }
 
+
+def check_reuse(
+    url: str,
+    prompts: list[list[int]],
+    reference: list[dict],
+    salts: list[str],
+    suffix: list[int],
+    ledger: TextIO,
+    label: str,
+) -> dict:
+    recorded = [row["output_ids"] for row in reference]
+    lengths = list(map(len, recorded))
+    post(url, "/flush_cache")
+    primed, _ = issue(
+        url,
+        payload_for(prompts, lengths, salts, recorded),
+        ledger,
+        {"cell": label, "phase": "cache_prime"},
+    )
+    assert [row["output_ids"] for row in primed] == recorded
+    continuation = [
+        prompt + output + suffix
+        for prompt, output in zip(prompts, recorded, strict=True)
+    ]
+    followup = payload_for(continuation, [8] * len(prompts), salts)
+    cached, _ = issue(url, followup, ledger, {"cell": label, "phase": "cache_hit"})
+    post(url, "/flush_cache")
+    cold, _ = issue(url, followup, ledger, {"cell": label, "phase": "cache_cold"})
+    eligible = [
+        len(prompt) + len(output) - 1
+        for prompt, output in zip(prompts, recorded, strict=True)
+    ]
+    hits = [row["meta_info"]["cached_tokens"] for row in cached]
+    assert all(row["meta_info"]["cached_tokens"] == 0 for row in cold)
+    assert all(hit >= count for hit, count in zip(hits, eligible, strict=True)), (
+        hits,
+        eligible,
+    )
+    assert [row["output_ids"] for row in cached] == [row["output_ids"] for row in cold]
+    assert all(row["meta_info"]["total_retractions"] == 0 for row in cached + cold)
+    return {
+        "passed": True,
+        "eligible_prefix_tokens": eligible,
+        "cached_tokens": hits,
+        "eligible_prefix_reuse_fraction": [
+            min(hit / count, 1.0) for hit, count in zip(hits, eligible, strict=True)
+        ],
+    }
+
