@@ -175,3 +175,88 @@ def check_reuse(
         ],
     }
 
+
+def run_cell(
+    url: str,
+    prompt: list[int],
+    suffix: list[int],
+    config: dict,
+    cell: dict,
+    ledger: TextIO,
+    report: dict,
+    output: Path,
+) -> dict:
+    width, concurrency = cell["output_length"], cell["concurrency"]
+    label = f"l{width}-c{concurrency}"
+    prompts = [prompt] * concurrency
+    lengths = [width] * concurrency
+    salts = [f"validation-{label}-{index}" for index in range(concurrency)]
+    ordinary = payload_for(prompts, lengths, salts)
+    post(url, "/flush_cache")
+    reference, reference_seconds = issue(
+        url, ordinary, ledger, {"cell": label, "phase": "reference"}
+    )
+    assert len(reference) == concurrency and all(
+        len(row["output_ids"]) == width for row in reference
+    )
+    replay = payload_for(
+        prompts, lengths, salts, [row["output_ids"] for row in reference]
+    )
+    post(url, "/flush_cache")
+    first, first_seconds = issue(
+        url, replay, ledger, {"cell": label, "phase": "first_replay"}
+    )
+    result = {
+        "name": label,
+        **cell,
+        "first_reference_seconds": reference_seconds,
+        "first_replay_seconds": first_seconds,
+        "first_replay_check": check_rows(first, reference, prompts, lengths),
+        "warmup_pairs": [],
+        "pairs": [],
+    }
+    report["cells"].append(result)
+    for index in range(-config["warmup_pairs"], config["pairs"]):
+        pair = {"index": index, "arms": {}}
+        order = ("ordinary", "replay") if index % 2 == 0 else ("replay", "ordinary")
+        for mode in order:
+            post(url, "/flush_cache")
+            rows, seconds = issue(
+                url,
+                ordinary if mode == "ordinary" else replay,
+                ledger,
+                {
+                    "cell": label,
+                    "phase": "warmup" if index < 0 else "measured",
+                    "pair": index,
+                    "mode": mode,
+                },
+            )
+            checks = check_rows(rows, reference, prompts, lengths)
+            pair["arms"][mode] = {
+                "seconds": seconds,
+                **checks,
+                "server_seconds": sum(row["meta_info"]["e2e_latency"] for row in rows)
+                / concurrency,
+            }
+        pair["overhead_fraction"] = (
+            pair["arms"]["replay"]["seconds"] / pair["arms"]["ordinary"]["seconds"] - 1
+        )
+        pair["valid"] = all(
+            arm["ids_match"] and arm["work_match"] for arm in pair["arms"].values()
+        )
+        result["warmup_pairs" if index < 0 else "pairs"].append(pair)
+        output.write_text(json.dumps(report, indent=2) + "\n")
+    result["primary_metric"] = estimate(
+        result["pairs"], config["critical"], config["target_fraction"]
+    )
+    result["cache_reuse"] = check_reuse(
+        url, prompts, reference, salts, suffix, ledger, label
+    )
+    result["passed"] = (
+        result["primary_metric"]["status"] == "pass"
+        and all(result["first_replay_check"].values())
+        and result["cache_reuse"]["passed"]
+    )
+    return result
+
