@@ -18,3 +18,6 @@ class TensorFactory:
     def __init__(self, pinned: bool):
         self.pinned = pinned
 
+    def __getattr__(self, name):
+        return getattr(torch, name)
+
