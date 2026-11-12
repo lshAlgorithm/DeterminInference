@@ -28,3 +28,8 @@ class TensorFactory:
             return host.to(device, non_blocking=True)
         return torch.tensor(data, **kwargs)
 
+
+def stage(requests: list, mode: str):
+    with patch.object(token_replay, "torch", TensorFactory(mode == "pinned_async")):
+        return token_replay.TokenReplayBatch.from_requests(requests, "cuda")
+
