@@ -260,3 +260,45 @@ def run_cell(
     )
     return result
 
+
+def check_mixed(url: str, prompt: list[int], ledger: TextIO) -> dict:
+    prompts = [prompt] * 4
+    lengths = [3, 7, 13, 11]
+    salts = [f"mixed-{index}" for index in range(4)]
+    plain = payload_for(prompts, lengths, salts)
+    post(url, "/flush_cache")
+    reference, _ = issue(url, plain, ledger, {"phase": "mixed_reference"})
+    forced = [[7, 8, 9], None, [11, 12, 13] * 4 + [14], [15] * 11]
+    post(url, "/flush_cache")
+    mixed, _ = issue(
+        url, payload_for(prompts, lengths, salts, forced), ledger, {"phase": "mixed"}
+    )
+    for index, row in enumerate(mixed):
+        assert row["output_ids"] == (
+            forced[index]
+            if forced[index] is not None
+            else reference[index]["output_ids"]
+        )
+    post(url, "/flush_cache")
+    after, _ = issue(url, plain, ledger, {"phase": "ordinary_after_mixed"})
+    assert [row["output_ids"] for row in after] == [
+        row["output_ids"] for row in reference
+    ]
+    counts = []
+    post(url, "/flush_cache")
+    for salt in ("isolation-a", "isolation-b", "isolation-a"):
+        rows, _ = issue(
+            url,
+            payload_for([prompt], [3], [salt], [[7, 8, 9]]),
+            ledger,
+            {"phase": "cache_isolation", "salt": salt},
+        )
+        counts.append(rows[0]["meta_info"]["cached_tokens"])
+    assert counts[:2] == [0, 0] and counts[2] >= len(prompt) - 1, counts
+    return {
+        "passed": True,
+        "mixed_lengths": lengths,
+        "isolation_cached_tokens": counts,
+        "ordinary_after_replay": "passed",
+    }
+
