@@ -101,3 +101,29 @@ def audit_cell(records: list[dict], cell: dict, config: dict) -> dict:
         "token_and_work_checks": "passed",
     }
 
+
+def audit_mixed(records: list[dict]) -> dict:
+    by_phase = {}
+    for row in records:
+        by_phase.setdefault(row["context"]["phase"], []).append(row)
+    reference = by_phase["mixed_reference"][0]["result"]
+    mixed = by_phase["mixed"][0]
+    after = by_phase["ordinary_after_mixed"][0]["result"]
+    for index, row in enumerate(mixed["result"]):
+        expected = mixed["request"]["sampling_params"][index].get(
+            "replay_token_ids", reference[index]["output_ids"]
+        )
+        assert row["output_ids"] == expected
+        assert after[index]["output_ids"] == reference[index]["output_ids"]
+        assert after[index]["text"] == reference[index]["text"]
+    isolation = by_phase["cache_isolation"]
+    assert [row["context"]["salt"] for row in isolation] == [
+        "isolation-a",
+        "isolation-b",
+        "isolation-a",
+    ]
+    counts = [row["result"][0]["meta_info"]["cached_tokens"] for row in isolation]
+    assert counts[:2] == [0, 0]
+    assert counts[2] >= len(isolation[0]["request"]["input_ids"][0]) - 1
+    return {"mixed_and_ordinary_recovery": "passed", "isolation_cached_tokens": counts}
+
