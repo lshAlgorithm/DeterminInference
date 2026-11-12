@@ -231,3 +231,84 @@ def test_roomy_cache_reuse(
         "followup_output_tokens": len(cached["output_ids"]),
     }
 
+
+def main(
+    url: str, output: Path, pair_count: int, requests_per_arm: int, warmup_pairs: int
+) -> None:
+    if output.exists():
+        raise FileExistsError(output)
+    report = {
+        "seed": SEED,
+        "complete": False,
+        "scope": (
+            "single-request fixed text with roomy cache; steady-state paired HTTP "
+            "overhead for this input only; no AgentX workload or population claim"
+        ),
+        "protocol": {
+            "pairs": pair_count,
+            "requests_per_arm": requests_per_arm,
+            "warmup_pairs": warmup_pairs,
+        },
+        "primary_metric": {
+            "name": "replay_http_wall_time_overhead",
+            "definition": (
+                "replay_seconds / ordinary_seconds - 1, "
+                "with cache flushed before each arm"
+            ),
+            "unit": "fraction",
+            "pairs": [],
+        },
+        "warmup_pairs": [],
+        "checks": {},
+    }
+    with output.with_suffix(".requests.jsonl").open("x") as ledger:
+        try:
+            prompt_ids = post(url, "/tokenize", {"prompt": PROMPT})["tokens"]
+            report["prompt_ids"] = prompt_ids
+            report["prompt_tokens"] = len(prompt_ids)
+            recorded, exact = test_exact_output(url, prompt_ids, ledger)
+            report["reference_output_ids"] = recorded
+            report["checks"]["exact_output"] = exact
+            measure_pairs(
+                url,
+                prompt_ids,
+                recorded,
+                pair_count,
+                requests_per_arm,
+                warmup_pairs,
+                ledger,
+                report,
+                output,
+            )
+            summarize_overhead(report["primary_metric"])
+            report["checks"]["measured_output"] = {
+                mode: all(
+                    request["output_ids_match"]
+                    for pair in report["primary_metric"]["pairs"]
+                    for request in pair["arms"][mode]["requests"]
+                )
+                for mode in ("ordinary", "replay")
+            }
+            report["checks"]["roomy_cache_reuse"] = test_roomy_cache_reuse(
+                url, prompt_ids, recorded, ledger
+            )
+            report["complete"] = True
+        except Exception as error:
+            report["error"] = repr(error)
+            raise
+        finally:
+            output.write_text(json.dumps(report, indent=2) + "\n")
+    print(json.dumps(report, indent=2))
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--url", required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--pairs", type=int, choices=(5, 20), default=5)
+    parser.add_argument("--requests-per-arm", type=int, default=1)
+    parser.add_argument("--warmup-pairs", type=int, default=2)
+    args = parser.parse_args()
+    if args.requests_per_arm < 1 or args.warmup_pairs < 0:
+        parser.error("requests-per-arm must be positive and warmup-pairs nonnegative")
+    main(args.url, args.output, args.pairs, args.requests_per_arm, args.warmup_pairs)
