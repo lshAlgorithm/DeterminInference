@@ -167,3 +167,35 @@ def measure_pairs(
         (report["warmup_pairs"] if index < 0 else pairs).append(pair)
         output.write_text(json.dumps(report, indent=2) + "\n")
 
+
+def summarize_overhead(metric: dict) -> None:
+    values = [pair["overhead_fraction"] for pair in metric["pairs"]]
+    mean = statistics.mean(values)
+    critical = {5: 2.776445105, 20: 2.093024054}[len(values)]
+    half = critical * statistics.stdev(values) / math.sqrt(len(values))
+    valid = all(pair["valid"] for pair in metric["pairs"])
+    metric.update(
+        {
+            "mean": mean,
+            "ci95": [mean - half, mean + half],
+            "method": (
+                "fixed final paired Student t interval under t assumptions; "
+                "no sample filtering or early stopping"
+            ),
+            "median_pair": statistics.median(values),
+            "min_pair": min(values),
+            "max_pair": max(values),
+            "valid": valid,
+            "target_fraction": 0.03,
+            "status": (
+                "invalid"
+                if not valid
+                else "pass"
+                if mean + half <= 0.03
+                else "fail"
+                if mean - half > 0.03
+                else "inconclusive"
+            ),
+        }
+    )
+
