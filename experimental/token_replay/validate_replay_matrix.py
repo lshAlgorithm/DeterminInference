@@ -50,3 +50,23 @@ def issue(
     ledger.flush()
     return rows, seconds
 
+
+def payload_for(
+    prompts: list[list[int]],
+    lengths: list[int],
+    salts: list[str],
+    recorded: list[list[int] | None] | None = None,
+) -> dict:
+    params = []
+    for index, length in enumerate(lengths):
+        item = {
+            "temperature": 0,
+            "sampling_seed": SEED,
+            "ignore_eos": True,
+            "max_new_tokens": length,
+        }
+        if recorded is not None and recorded[index] is not None:
+            item["replay_token_ids"] = recorded[index]
+        params.append(item)
+    return {"input_ids": prompts, "sampling_params": params, "extra_key": salts}
+
