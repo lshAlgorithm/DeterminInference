@@ -69,3 +69,28 @@ def generate(
         ledger.flush()
     return result, seconds
 
+
+def test_exact_output(
+    url: str, prompt_ids: list[int], ledger: TextIO | None = None
+) -> tuple[list[int], dict]:
+    post(url, "/flush_cache")
+    ordinary, _ = generate(
+        url, prompt_ids, 32, ledger=ledger, context={"phase": "reference"}
+    )
+    recorded = ordinary["output_ids"]
+    assert len(recorded) == 32
+    post(url, "/flush_cache")
+    replayed, _ = generate(
+        url,
+        prompt_ids,
+        len(recorded),
+        recorded,
+        ledger,
+        {"phase": "exact_output", "mode": "replay"},
+    )
+    assert replayed["output_ids"] == recorded, replayed
+    assert replayed["text"] == ordinary["text"]
+    assert replayed["meta_info"]["finish_reason"]["type"] == "length"
+
+    return recorded, {"passed": True, "output_tokens": len(recorded)}
+
