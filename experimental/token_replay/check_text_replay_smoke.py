@@ -31,3 +31,41 @@ def post(url: str, path: str, payload: dict | None = None) -> dict:
             return {}
         return json.load(response)
 
+
+def generate(
+    url: str,
+    input_ids: list[int],
+    output_length: int,
+    replay: list[int] | None = None,
+    ledger: TextIO | None = None,
+    context: dict | None = None,
+) -> tuple[dict, float]:
+    params = {
+        "temperature": 0,
+        "sampling_seed": SEED,
+        "ignore_eos": True,
+        "max_new_tokens": output_length,
+    }
+    if replay is not None:
+        params["replay_token_ids"] = replay
+    payload = {"input_ids": input_ids, "sampling_params": params}
+    wall_time_ns = time.time_ns()
+    started = time.perf_counter()
+    result = post(url, "/generate", payload)
+    seconds = time.perf_counter() - started
+    if ledger is not None:
+        ledger.write(
+            json.dumps(
+                {
+                    "wall_time_ns": wall_time_ns,
+                    "context": context,
+                    "request": payload,
+                    "seconds": seconds,
+                    "result": result,
+                }
+            )
+            + "\n"
+        )
+        ledger.flush()
+    return result, seconds
+
