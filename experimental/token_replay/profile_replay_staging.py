@@ -33,3 +33,17 @@ def stage(requests: list, mode: str):
     with patch.object(token_replay, "torch", TensorFactory(mode == "pinned_async")):
         return token_replay.TokenReplayBatch.from_requests(requests, "cuda")
 
+
+def validate(batch, requests: list) -> None:
+    gc.collect()
+    expected = [request.sampling_params.replay_token_ids for request in requests]
+    assert [
+        token.tolist() if token is not None else None for token in batch.tokens
+    ] == expected
+    sampled = torch.full((len(requests),), -1, device="cuda", dtype=torch.int32)
+    positions = torch.full((len(requests),), 31, device="cuda", dtype=torch.int64)
+    batch.apply(sampled, positions)
+    assert sampled.tolist() == [
+        sequence[0] if sequence is not None else -1 for sequence in expected
+    ]
+
