@@ -127,3 +127,65 @@ def audit_mixed(records: list[dict]) -> dict:
     assert counts[2] >= len(isolation[0]["request"]["input_ids"][0]) - 1
     return {"mixed_and_ordinary_recovery": "passed", "isolation_cached_tokens": counts}
 
+
+def audit(root: Path, sources: Path) -> dict:
+    spec = json.loads((root / "spec.json").read_text())
+    identity = json.loads((root / "source-identity.json").read_text())
+    for name, digest in identity["files"].items():
+        assert (
+            hashlib.sha256((sources / Path(name).name).read_bytes()).hexdigest()
+            == digest
+        )
+    stages = []
+    first_ids = []
+    first_texts = []
+    for stage in spec["stages"]:
+        directory = root / stage["name"]
+        result = json.loads((directory / "result.json").read_text())
+        receipt = json.loads((directory / "receipt.json").read_text())
+        assert receipt["status"] == "complete" and receipt["client_returncode"] == 0
+        assert result["complete"] and not result.get("errors")
+        records = [
+            json.loads(line)
+            for line in (directory / "result.requests.jsonl").read_text().splitlines()
+        ]
+        assert not any("error" in row for row in records)
+        config = spec["suites"][stage["suite"]]
+        assert len(result["cells"]) == len(config["cells"])
+        cells = [audit_cell(records, cell, config) for cell in result["cells"]]
+        first = next(
+            row
+            for row in records
+            if row["context"] == {"cell": "l32-c1", "phase": "first_replay"}
+        )["result"][0]
+        first_ids.append(first["output_ids"])
+        first_texts.append(first["text"])
+        stages.append(
+            {
+                "name": stage["name"],
+                "raw_requests": sum(len(row["result"]) for row in records),
+                "cells": cells,
+                **audit_mixed(records),
+            }
+        )
+    assert len(first_ids) == 3 and all(ids == first_ids[0] for ids in first_ids)
+    assert all(value == first_texts[0] for value in first_texts)
+    return {
+        "source_hashes": "passed",
+        "three_fresh_start_ids_and_text": "passed",
+        "all_checks_passed": all(
+            cell["overhead_target_passed"]
+            for stage in stages
+            for cell in stage["cells"]
+        ),
+        "stages": stages,
+    }
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--root", type=Path, required=True)
+    parser.add_argument("--sources", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    args.output.write_text(json.dumps(audit(args.root, args.sources), indent=2) + "\n")
