@@ -199,3 +199,35 @@ def summarize_overhead(metric: dict) -> None:
         }
     )
 
+
+def test_roomy_cache_reuse(
+    url: str, prompt_ids: list[int], recorded: list[int], ledger: TextIO | None = None
+) -> dict:
+    suffix_ids = post(
+        url, "/tokenize", {"prompt": SUFFIX, "add_special_tokens": False}
+    )["tokens"]
+    followup = prompt_ids + recorded + suffix_ids
+    post(url, "/flush_cache")
+    primed, _ = generate(
+        url, prompt_ids, len(recorded), recorded, ledger, {"phase": "cache_prime"}
+    )
+    assert primed["output_ids"] == recorded
+    cached, _ = generate(
+        url, followup, 8, ledger=ledger, context={"phase": "cache_hit"}
+    )
+    post(url, "/flush_cache")
+    cold, _ = generate(url, followup, 8, ledger=ledger, context={"phase": "cache_cold"})
+
+    eligible_prefix = len(prompt_ids) + len(recorded) - 1
+    reused = cached["meta_info"]["cached_tokens"]
+    assert cold["meta_info"]["cached_tokens"] == 0, cold
+    assert reused >= eligible_prefix, (reused, eligible_prefix)
+    assert cached["output_ids"] == cold["output_ids"]
+    return {
+        "passed": True,
+        "eligible_prefix_tokens": eligible_prefix,
+        "cached_tokens": reused,
+        "eligible_prefix_reuse_fraction": min(reused / eligible_prefix, 1.0),
+        "followup_output_tokens": len(cached["output_ids"]),
+    }
+
