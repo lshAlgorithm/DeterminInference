@@ -21,3 +21,10 @@ class TensorFactory:
     def __getattr__(self, name):
         return getattr(torch, name)
 
+    def tensor(self, data, **kwargs):
+        device = kwargs.get("device")
+        if self.pinned and device is not None and torch.device(device).type == "cuda":
+            host = torch.tensor(data, **{**kwargs, "device": "cpu", "pin_memory": True})
+            return host.to(device, non_blocking=True)
+        return torch.tensor(data, **kwargs)
+
