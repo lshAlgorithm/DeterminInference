@@ -13,6 +13,71 @@ and works offline; source and evidence links use the surrounding repository.
 
 ## Code and environment
 
+`check_text_replay_smoke.py` provides two focused single-request HTTP
+checks using a fixed text prompt and seed42: exact generated/replayed output
+IDs and text, then reuse of the eligible prompt-plus-output prefix by a
+continuation under roomy KV capacity. Its primary metric is paired replay HTTP
+wall-time overhead (`replay / ordinary - 1`) across five alternating pairs;
+token identity and KV reuse are acceptance checks. Run it only against
+an idle server with `--max-running-requests 1`, sufficient KV capacity and
+`--enable-cache-report`:
+
+```bash
+python3 experimental/token_replay/check_text_replay_smoke.py \
+  --url http://127.0.0.1:31000 \
+  --output /path/to/new/smoke-result.json
+```
+
+The script refuses to overwrite an existing result. Its cache ratio uses the
+eligible prefix as denominator, excluding the final generated token that the
+server does not forward into KV. The test is a text-derived mock, not an AgentX
+trajectory or a performance population estimate.
+
+`--pairs 20 --requests-per-arm 4 --warmup-pairs 2` selects the fixed diagnostic
+protocol. Every response is written to a `.requests.jsonl` ledger before
+validation; partial reports survive later failures. Ordinary output drift and
+replay mismatch make the measured pair invalid. All measured pairs remain in
+the final overhead interval. See the
+[optimization investigation](replay-optimization-20261112.md) for the isolated
+GPU6 result (mean0.0861%,95% interval[-0.0321%,0.2044%]) and the rejected
+asynchronous staging candidate.
+
+### GPU6 smoke, 2026-11-12
+
+The initial server attempt stalled while reading the second model shard and was
+stopped. The next attempt loaded both shards but failed because its launcher
+omitted the Conda `bin` directory containing `ninja`. The third server used the
+frozen specification's full `PATH` and completed initialization on GPU0.
+
+The first smoke invocation then failed an exact-ID assertion inside the paired
+loop; that version of the assertion did not record the mismatched IDs or arm.
+After adding failure context, three full invocations passed both checks: all32
+output IDs and text matched per invocation, and the continuation cached262
+tokens against261 eligible prefix tokens (reported as100% eligible-prefix
+reuse). The checks used batch size1 and a230-token prompt.
+
+The five-pair overhead means were0.182%,14.729% and0.213% across the three
+successful invocations. A single replay arm took0.3894s versus0.2250s for its
+ordinary partner, a73.091% outlier that raised the middle mean. These are raw
+descriptive measurements, not a stable overhead acceptance result. The earlier
+fixed32-prompt experiment in the meeting report remains the scoped overhead
+evidence. All raw smoke reports, the initial failed assertion, the server log
+and the kernel profile are in
+[`evidence/meeting-smoke-20261112-retry02/`](evidence/meeting-smoke-20261112-retry02/).
+
+The fresh GPU2 CUDA-event profile measured1.022/1.063/1.114/1.155 microseconds
+per replacement for batch sizes1/32/128/512. It measures the whole Triton
+replacement kernel, not individual loads, so it does not justify an
+asynchronous kernel change.
+
+The completed fixed-text matrix, three fresh-server checks, per-request cache
+salt fix, and raw-ledger audit are documented in the
+[2026-11-13 validation report](replay-optimization-20261113.md). Across output
+lengths 32/128/512 and batch sizes 1/4/8, all nine familywise 95% overhead
+intervals are below the 3% target; eligible-prefix KV reuse is 100% in every
+cell. The first replay after each fresh server start is reported separately
+because lazy Triton compilation adds about 218-245 ms to that request.
+
 | Component | Frozen base or artifact |
 | --- | --- |
 | AgentX harness1.0.13 | Base `60a094f256b42f55fde1efb3d45672e1d9a44566`, tag `agentx-v1.0.13`; [patch](agentx-harness-v1.0.13.patch) through `b9772d2` |

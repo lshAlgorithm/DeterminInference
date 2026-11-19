@@ -1,6 +1,6 @@
 # AgentX Token Replay：项目复盘与源码学习
 
-这份笔记解释我们已经做过的工程，以及其中的推理系统原理。整理日期：2026-11-10；核对源码版本：`7583033`。本文是学习材料，不是新实验结果或新的审阅接受记录。
+这份笔记解释我们已经做过的工程，以及其中的推理系统原理。整理日期：2026-11-10；核对源码版本：`7583033`。自然 L1 的运行状态补记至 2026-11-17；本文是学习材料，不是新的审阅接受记录。
 
 先记住项目的一句话目标：**让 AgentX 回放记录里的对话时，服务端沿着记录里的 token 轨迹继续做真实模型计算，使后续 prompt 有机会复用对应的 KV 前缀。**
 
@@ -20,7 +20,7 @@
 | MoE | 21 sessions、308 requests/内容类型；性能、路由、双 rank 诊断分别记录 | 路由分布变了，不代表吞吐显著变快或计算时间存在因果变化 |
 | 受控 L1 | 同一请求 pause/retract/resume，641/641 output IDs 一致 | 仅受控触发，不是自然 KV-pressure 覆盖 |
 | L2 / L3 | 混合 batch filter/merge；活动取消、后端 abort、退出 batch 与后续请求通过 | 原 receipt 和修正后的只读 recheck 都保留 |
-| 自然 L1 | spec、validator、hash manifest 已冻结；原 gpu6 guard 未通过，零次启动 | 该 run 为 INCOMPLETE；自然覆盖仍 UNCOVERED |
+| 自然 L1 | 2026-11-17 新冻结 run 的 c4/c8 均完成，无 driver failure；L2/L3 PASS | 未观察到同请求自然 `kv_full` 链；自然覆盖仍 UNCOVERED |
 | B2 | 有条件的 instrumented AgentX c1 fixed-cohort 计划 | DEFERRED，没有扩大 overhead claim |
 | 审阅与交付 | Codex review 完成但 provisional；确定性检查有记录 | Claude unavailable；不是双审通过，无 upstream formal acceptance 或 official benchmark score |
 
@@ -238,7 +238,9 @@ d_i = T_recorded / T_generated - 1
 
 自然 PASS 需要已消费前缀不变、恢复后的下一 output ID 正确、无重复/跳过/错位、最终 IDs/长度/finish reason 与 reference 一致。没有自然触发或缺链是 UNCOVERED；资源 guard 失败、实验没开始是 INCOMPLETE；发现实际不一致才是 FAIL。
 
-现状：原 gpu6 guard 发现占用，所以零次启动；自然 L1 仍 UNCOVERED。之前的受控 641-token PASS 继续有效，不升级为自然恢复证明。
+现状（2026-11-17）：新冻结 run 的 c4 与一次合规 c8 升级均完整结束；c4 有 9 个、c8 有 12 个请求，所有请求均关闭。两档的 L2/L3 为 PASS，L1 为 UNCOVERED；c8 没有自然 `kv_full` 触发事件。之前的受控 641-token PASS 继续有效，不升级为自然恢复证明。原 2026-11-09 guard 失败仍保留为该旧 run 的 INCOMPLETE 记录。
+
+新 run 的完整 receipts、原始 observer events、wire 记录和清理证明见 [2026-11-17 证据目录](evidence/natural-kv-l1-20261117/)；运行身份与结果摘要见 [manifest](evidence/natural-kv-l1-20261117-inputs/MANIFEST.json)。
 
 选读：[自然实验计划](../../refine-logs/NATURAL_KV_L1_PLAN_20261109.md)、[guard receipt](evidence/natural-kv-l1-20261109/guard-receipt.json)。阅读本文不需要运行模型服务。
 

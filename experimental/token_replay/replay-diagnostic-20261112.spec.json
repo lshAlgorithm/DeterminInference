@@ -1,0 +1,40 @@
+{
+  "seed": 42,
+  "purpose": "Fixed text diagnostic on an idle GPU; distinguish ordinary drift, replay mismatch, server delay and client delay without removing outliers",
+  "gpu_indices": [2],
+  "native_result": "result.json",
+  "server": {
+    "env": {
+      "CUDA_VISIBLE_DEVICES": "2",
+      "CUDA_HOME": "/home/tegao/infra-token-replay/cuda-toolkit",
+      "PYTHONPATH": "/home/tegao/infra-token-replay/python",
+      "PATH": "/home/tegao/infra-token-replay/.venv/bin:/home/tegao/infra-token-replay/cuda-toolkit/bin:/home/tegao/miniconda3/envs/verl_qwen35_sglang/bin:/usr/local/bin:/usr/bin:/bin",
+      "OMP_NUM_THREADS": "8",
+      "MKL_NUM_THREADS": "8",
+      "OPENBLAS_NUM_THREADS": "8"
+    },
+    "cmd": [
+      "/home/tegao/infra-token-replay/.venv/bin/python", "-m", "sglang.launch_server",
+      "--model-path", "/home/tegao/models/Qwen2.5-7B-Instruct-GPTQ-Int4",
+      "--served-model-name", "Qwen2.5-7B-Instruct-GPTQ-Int4",
+      "--host", "127.0.0.1", "--port", "31003",
+      "--random-seed", "42", "--attention-backend", "triton",
+      "--mem-fraction-static", "0.75", "--context-length", "4096",
+      "--max-total-tokens", "32768", "--max-running-requests", "1",
+      "--cuda-graph-max-bs", "1", "--enable-cache-report", "--enable-metrics"
+    ]
+  },
+  "client": {
+    "env": {"AIPERF_SERVER_URL": "http://127.0.0.1:31003"},
+    "cmd": [
+      "/home/tegao/infra-token-replay/.venv/bin/python",
+      "/home/tegao/infra-token-replay/replay-diagnostic-20261112/check_text_replay_smoke.py",
+      "--url", "http://127.0.0.1:31003",
+      "--output", "/home/tegao/infra-token-replay/replay-diagnostic-20261112-run01/isolated/result.json",
+      "--pairs", "20", "--requests-per-arm", "4", "--warmup-pairs", "2"
+    ]
+  },
+  "points": [
+    {"name": "isolated", "mode": "recorded", "trace": "", "capacity": 32768, "concurrency": 1, "duration": 180}
+  ]
+}

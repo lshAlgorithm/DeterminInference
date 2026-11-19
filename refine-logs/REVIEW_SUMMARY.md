@@ -36,10 +36,13 @@ Anchor preserved verbatim. One dominant contribution remains: explicit token-bea
 
 [Review availability receipt](REVIEW_AVAILABILITY.md) records the exact skill instruction and absent capability. Deterministic artifact checks cover version parity, links and claim/anchor consistency only; they do not accept the method on behalf of Claude. The implementation's prior independent delivery review remains a separate evidence item.
 
-Post-plan execution evidence is recorded separately: controlled L1 passed on the
-documented pause/retract path with 641/641 output IDs, L2 and L3 passed in the
-read-only lifecycle rechecks, and the historical c4/c8 windows did not expose a
-natural same-request chain. A new natural-pressure specification was frozen,
-but its fresh gpu6 GPU0 guard failed before launch, so that run is INCOMPLETE;
-natural KV-pressure L1 remains unsupported. This execution update does not
-change the Codex-only provisional review status.
+Post-plan execution evidence is recorded separately. Controlled L1 passed on
+the documented pause/retract path with 641/641 output IDs, and L2/L3 passed in
+the historical lifecycle windows. The 2026-11-09 natural-pressure run was
+INCOMPLETE because its GPU guard failed before launch. A separate re-freeze was
+then executed on 2026-11-17: c4 and the permitted c8 escalation completed
+without driver failure, L2/L3 passed, but neither window observed the required
+same-request natural `kv_full` chain. Natural KV-pressure L1 therefore remains
+UNCOVERED, not INCOMPLETE; the new receipts, observer events, logs, and hashes
+are recorded in `experimental/token_replay/evidence/natural-kv-l1-20261117/`.
+This execution update does not change the Codex-only provisional review status.

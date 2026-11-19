@@ -499,3 +499,25 @@ This run is **INCOMPLETE**, not a natural-pressure result. Natural KV-pressure
 coverage remains unsupported; the controlled 641-token result remains the
 narrow lifecycle conclusion. No B2 source/wheel change or overhead measurement
 was started.
+
+## Natural KV-pressure follow-up, 2026-11-17
+
+The earlier 2026-11-09 run above remains **INCOMPLETE** because it never
+started. With user authorization to proceed without recovering the old driver
+bytes, a new driver and spec were frozen and independently checked on gpu6. The
+c4 window completed with no driver failure: L2/L3 passed, while natural L1 was
+**UNCOVERED**. Its complete receipt and saved observer events passed the frozen
+c8 escalation gate, so one c8 window ran and also completed without driver
+failure; L2/L3 passed and natural L1 remained **UNCOVERED**, with zero observed
+natural trigger events. The 9 c4 and 12 c8 requests all reached terminal,
+closed wire states.
+
+The service used GPU0 only, with test-retraction variables unset and CUDA graphs
+disabled. It was stopped with SIGTERM; port 19080 was released and GPU0 returned
+to 4 MiB usage. The full evidence package, including receipts, wire files,
+observer events, logs, launch artifact verification, and cleanup proof, is in
+[`natural-kv-l1-20261117`](../../experimental/token_replay/evidence/natural-kv-l1-20261117/);
+the frozen identities and result summary are in its
+[`MANIFEST.json`](../../experimental/token_replay/evidence/natural-kv-l1-20261117-inputs/MANIFEST.json).
+This completes the declared two-attempt run, but does not establish natural
+KV-pressure L1 correctness or change the separate B2/overhead boundary.
