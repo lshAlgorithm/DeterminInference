@@ -202,3 +202,87 @@ def test_corpus_is_uncapped_unless_explicitly_capped_or_pinned(prefix, override,
 
     assert (config.loader, config.dataset) == (loader, dataset)
     assert _value(replay_argv(config, "/venv/bin/agentx"), "--public-dataset") == loader
+
+
+def test_token_trace_uses_original_scenario_without_public_prefetch(tmp_path):
+    trace = tmp_path / "trace.json"
+    trace.write_text("{}")
+    cfg = ReplayConfig.from_env({
+        **BASE_ENV, "FRAMEWORK": "sglang", "AGENTX_TOKEN_TRACE": str(trace),
+        "AGENTX_REPLAY_MODE": "recorded", "AGENTX_HARNESS_WHEEL": "/patched.whl",
+        "AGENTX_HARNESS_SHA256": "f" * 64,
+    }, tmp_path)
+    argv = replay_argv(cfg, "/agentx")
+    assert argv[:2] == ["/agentx", "profile"]
+    assert _value(argv, "--input-file") == str(trace)
+    assert _value(argv, "--custom-dataset-type") == "weka_trace"
+    assert _value(argv, "--endpoint-type") == "sglang-token-completions"
+    assert _value(argv, "--random-seed") == "42"
+    assert "--public-dataset" not in argv
+    assert "--unsafe-override" in argv
+
+
+@pytest.mark.parametrize("overrides", [
+    {"AGENTX_REPLAY_MODE": "bad"},
+    {"AGENTX_REPLAY_MODE": ""},
+    {"FRAMEWORK": "vllm"},
+    {"AGENTX_HARNESS_SHA256": ""},
+    {"AIPERF_APPLY_CHAT_TEMPLATE": "true"},
+])
+def test_invalid_token_experiment_rejected_before_bootstrap(tmp_path, overrides):
+    trace = tmp_path / "trace.json"
+    trace.write_text("{}")
+    env = {
+        **BASE_ENV, "FRAMEWORK": "sglang", "AGENTX_TOKEN_TRACE": str(trace),
+        "AGENTX_REPLAY_MODE": "recorded", "AGENTX_HARNESS_WHEEL": "/patched.whl",
+        "AGENTX_HARNESS_SHA256": "f" * 64, **overrides,
+    }
+    with pytest.raises(InputError):
+        ReplayConfig.from_env(env, tmp_path)
+
+
+@pytest.mark.parametrize("mode", ["generated", "recorded"])
+def test_finite_token_sessions_preserve_duration_and_scenario(tmp_path, mode):
+    trace = tmp_path / "sessions"
+    trace.mkdir()
+    cfg = ReplayConfig.from_env(
+        {
+            **BASE_ENV,
+            "FRAMEWORK": "sglang",
+            "AGENTX_TOKEN_TRACE": str(trace),
+            "AGENTX_REPLAY_MODE": mode,
+            "AGENTX_HARNESS_WHEEL": "/patched.whl",
+            "AGENTX_HARNESS_SHA256": "f" * 64,
+            "AGENTX_NUM_SESSIONS": "8",
+        },
+        tmp_path,
+    )
+    argv = replay_argv(cfg, "/agentx")
+    assert cfg.num_sessions == 8
+    assert _value(argv, "--num-sessions") == "8"
+    assert _value(argv, "--benchmark-duration") == "3600"
+    assert _value(argv, "--custom-dataset-type") == "weka_trace"
+    assert "--request-count" not in argv
+    assert "--warmup-requests-per-lane" not in argv
+    with pytest.raises(InputError, match="local token experiment"):
+        _argv(AGENTX_NUM_SESSIONS="4")
+    for limit, error in [
+        ("0", "positive integer"),
+        ("-1", "positive integer"),
+        ("1.5", "positive integer"),
+        ("four", "positive integer"),
+        ("4", "at least CONC"),
+    ]:
+        with pytest.raises(InputError, match=error):
+            ReplayConfig.from_env(
+                {
+                    **BASE_ENV,
+                    "FRAMEWORK": "sglang",
+                    "AGENTX_TOKEN_TRACE": str(trace),
+                    "AGENTX_REPLAY_MODE": mode,
+                    "AGENTX_HARNESS_WHEEL": "/patched.whl",
+                    "AGENTX_HARNESS_SHA256": "f" * 64,
+                    "AGENTX_NUM_SESSIONS": limit,
+                },
+                tmp_path,
+            )
