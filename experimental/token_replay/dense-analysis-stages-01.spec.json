@@ -1,0 +1,17 @@
+{
+  "wait_for": "/home/tegao/infra-token-replay/dense-audit-stages-01/status.json",
+  "stages": [
+    {
+      "name": "compare",
+      "env": {},
+      "cmd": [
+        "/home/tegao/infra-token-replay/.harness/bin/python",
+        "/home/tegao/infra-token-replay/compare_dense.py",
+        "--summary",
+        "/home/tegao/infra-token-replay/dense-formal-01-summary.json",
+        "--output",
+        "/home/tegao/infra-token-replay/dense-formal-01-comparison.json"
+      ]
+    }
+  ]
+}

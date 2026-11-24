@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "run_id": "natural-kv-l1-20261109",
+  "status": "INCOMPLETE",
+  "spec_sha256": "5c59f86a49ebb969bcd4fe3b7920fcfccddb749639fae7a97e4f3e624fd61206",
+  "prepare_script_sha256": "e3562a1a24e1c332b97f1ee87fe84108655e00e4226c96afc591e14f6d7a1ecf",
+  "validator_script_sha256": "5b4be480ae0a1a9771f5a236e425459ea406bdbbcd6ba4b8f9c0a1f37cfe4214",
+  "plan_sha256": "1b89c6fa589a76e3f752e8d9b8d5620872d849dfbceb4dac9aa9cce26af54094",
+  "guard_receipt_sha256": "191d2e8c3a37004d487bd688dfdce7805b0491093055af61f9464f331a573f90",
+  "seed": 42,
+  "gpu_host": "gpu6",
+  "requested_gpu": 0,
+  "attempts_started": 0,
+  "claim_boundary": "No natural KV-pressure result; fresh GPU guard failed before launch",
+  "review": {
+    "codex": "provisional",
+    "claude": "unavailable",
+    "dual_review_acceptance": false
+  }
+}

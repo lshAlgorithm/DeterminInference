@@ -1,0 +1,149 @@
+{
+  "seed": 42,
+  "purpose": "Complete fixed-text length/concurrency validation and independent first-replay restarts on GPU6",
+  "gpu_indices": [
+    2
+  ],
+  "native_result": "result.json",
+  "cache_root": "/home/tegao/infra-token-replay/complete-replay-validation-20261113/cache",
+  "identity_files": [
+    "/home/tegao/infra-token-replay/python/sglang/srt/sampling/token_replay.py",
+    "/home/tegao/infra-token-replay/python/sglang/srt/layers/sampler.py",
+    "/home/tegao/infra-token-replay/complete-replay-validation-20261113/validate_replay_matrix.py",
+    "/home/tegao/infra-token-replay/complete-replay-validation-20261113/run_replay_validation.py",
+    "/home/tegao/infra-token-replay/python/sglang/srt/managers/io_struct.py",
+    "/home/tegao/infra-token-replay/complete-replay-validation-20261113/check_text_replay_smoke.py",
+    "/home/tegao/infra-token-replay/complete-replay-validation-20261113/run_campaign.py"
+  ],
+  "server": {
+    "env": {
+      "CUDA_VISIBLE_DEVICES": "2",
+      "CUDA_HOME": "/home/tegao/infra-token-replay/cuda-toolkit",
+      "PYTHONPATH": "/home/tegao/infra-token-replay/python",
+      "PATH": "/home/tegao/infra-token-replay/.venv/bin:/home/tegao/infra-token-replay/cuda-toolkit/bin:/home/tegao/miniconda3/envs/verl_qwen35_sglang/bin:/usr/local/bin:/usr/bin:/bin",
+      "OMP_NUM_THREADS": "8",
+      "MKL_NUM_THREADS": "8",
+      "OPENBLAS_NUM_THREADS": "8"
+    },
+    "cmd": [
+      "/home/tegao/infra-token-replay/.venv/bin/python",
+      "-m",
+      "sglang.launch_server",
+      "--model-path",
+      "/home/tegao/models/Qwen2.5-7B-Instruct-GPTQ-Int4",
+      "--served-model-name",
+      "Qwen2.5-7B-Instruct-GPTQ-Int4",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "31004",
+      "--random-seed",
+      "42",
+      "--attention-backend",
+      "triton",
+      "--mem-fraction-static",
+      "0.75",
+      "--context-length",
+      "4096",
+      "--max-total-tokens",
+      "32768",
+      "--max-running-requests",
+      "8",
+      "--cuda-graph-max-bs",
+      "8",
+      "--enable-cache-report",
+      "--enable-metrics"
+    ]
+  },
+  "client": {
+    "env": {
+      "AIPERF_SERVER_URL": "http://127.0.0.1:31004"
+    },
+    "cmd": [
+      "/home/tegao/infra-token-replay/.venv/bin/python",
+      "/home/tegao/infra-token-replay/complete-replay-validation-20261113/validate_replay_matrix.py",
+      "--protocol",
+      "/home/tegao/infra-token-replay/complete-replay-validation-20261113/complete-replay-validation-20261113.spec.json"
+    ]
+  },
+  "suites": {
+    "matrix": {
+      "pairs": 20,
+      "warmup_pairs": 2,
+      "target_fraction": 0.03,
+      "critical": 3.126595253166262,
+      "interval_method": "Bonferroni familywise 95% across nine cells; t.ppf(1-0.05/(2*9),19), fixed final look",
+      "cells": [
+        {
+          "output_length": 32,
+          "concurrency": 1
+        },
+        {
+          "output_length": 32,
+          "concurrency": 4
+        },
+        {
+          "output_length": 32,
+          "concurrency": 8
+        },
+        {
+          "output_length": 128,
+          "concurrency": 1
+        },
+        {
+          "output_length": 128,
+          "concurrency": 4
+        },
+        {
+          "output_length": 128,
+          "concurrency": 8
+        },
+        {
+          "output_length": 512,
+          "concurrency": 1
+        },
+        {
+          "output_length": 512,
+          "concurrency": 4
+        },
+        {
+          "output_length": 512,
+          "concurrency": 8
+        }
+      ]
+    },
+    "cold": {
+      "pairs": 20,
+      "warmup_pairs": 2,
+      "target_fraction": 0.03,
+      "critical": 2.0930240544083087,
+      "interval_method": "Pointwise 95% paired t interval, fixed final look; cold behavior uses exact IDs",
+      "cells": [
+        {
+          "output_length": 32,
+          "concurrency": 1
+        }
+      ]
+    }
+  },
+  "stages": [
+    {
+      "name": "matrix",
+      "suite": "matrix",
+      "concurrency": 8,
+      "duration": 1200
+    },
+    {
+      "name": "cold02",
+      "suite": "cold",
+      "concurrency": 1,
+      "duration": 180
+    },
+    {
+      "name": "cold03",
+      "suite": "cold",
+      "concurrency": 1,
+      "duration": 180
+    }
+  ]
+}

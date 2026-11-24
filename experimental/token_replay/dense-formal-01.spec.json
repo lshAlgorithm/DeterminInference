@@ -1,0 +1,438 @@
+{
+  "seed": 42,
+  "purpose": "formal paired Dense matrix: 2 behaviors x 3 concurrencies x 2 capacities x 3 repeats x 900-second admission windows",
+  "gpu_indices": [
+    0
+  ],
+  "server": {
+    "env": {
+      "CUDA_VISIBLE_DEVICES": "0",
+      "CUDA_HOME": "/home/tegao/infra-token-replay/cuda-toolkit",
+      "PATH": "/home/tegao/infra-token-replay/.venv/bin:/home/tegao/infra-token-replay/cuda-toolkit/bin:/home/tegao/miniconda3/envs/verl_qwen35_sglang/bin:/usr/local/bin:/usr/bin:/bin",
+      "OMP_NUM_THREADS": "8",
+      "MKL_NUM_THREADS": "8",
+      "OPENBLAS_NUM_THREADS": "8",
+      "PYTHONPATH": "/home/tegao/infra-token-replay/python"
+    },
+    "cmd": [
+      "/home/tegao/infra-token-replay/.venv/bin/python",
+      "-m",
+      "sglang.launch_server",
+      "--model-path",
+      "/home/tegao/models/Qwen2.5-7B-Instruct-GPTQ-Int4",
+      "--served-model-name",
+      "Qwen2.5-7B-Instruct-GPTQ-Int4",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "31000",
+      "--random-seed",
+      "42",
+      "--attention-backend",
+      "triton",
+      "--mem-fraction-static",
+      "0.75",
+      "--context-length",
+      "16384",
+      "--max-total-tokens",
+      "32768",
+      "--max-running-requests",
+      "16",
+      "--cuda-graph-max-bs",
+      "16",
+      "--disable-piecewise-cuda-graph",
+      "--enable-metrics",
+      "--enable-cache-report",
+      "--log-level",
+      "warning",
+      "--log-level-http",
+      "warning"
+    ]
+  },
+  "client": {
+    "cmd": [
+      "/home/tegao/infra-token-replay/infx-runtime-01/venv/bin/python",
+      "-m",
+      "infx.bench",
+      "agentic"
+    ],
+    "env": {
+      "PATH": "/home/tegao/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",
+      "PYTHONPATH": "/home/tegao/infra-token-replay/inferencex-e2e",
+      "MODEL": "/home/tegao/models/Qwen2.5-7B-Instruct-GPTQ-Int4",
+      "TOKENIZER": "/home/tegao/models/Qwen2.5-7B-Instruct-GPTQ-Int4",
+      "MODEL_PREFIX": "qwen2.5",
+      "SERVED_MODEL_NAME": "Qwen2.5-7B-Instruct-GPTQ-Int4",
+      "FRAMEWORK": "sglang",
+      "CONC": "4",
+      "DURATION": "60",
+      "AIPERF_DYNAMO_SESSION_TIMEOUT_SECONDS": "120",
+      "AIPERF_EXPERIMENTAL_FAST": "0",
+      "AIPERF_HTTP_X_DYNAMO_SESSION_ID_FROM_CORRELATION_ID": "false",
+      "AIPERF_USE_DYNAMO_CONV_AWARE_ROUTING": "0",
+      "RESULT_DIR": "/home/tegao/infra-token-replay/dense-dag-02",
+      "RESULT_FILENAME": "entry",
+      "EVAL_ONLY": "false",
+      "IS_MULTINODE": "false",
+      "PRECISION": "int4",
+      "AGENTX_TOKEN_TRACE": "/home/tegao/infra-token-replay/acceptance-dag-01/sessions",
+      "AGENTX_REPLAY_MODE": "recorded",
+      "AGENTX_HARNESS_WHEEL": "/home/tegao/infra-token-replay/harness-wheel-v2/agentx_harness-1.0.13-py3-none-any.whl",
+      "AGENTX_HARNESS_SHA256": "9270c07b76981109a204a8c3b66cf706b501228ac194da3a9608e8a3a9676037",
+      "AIPERF_SERVER_URL": "http://127.0.0.1:31000",
+      "AIPERF_SERVER_METRICS_URLS": "http://127.0.0.1:31000/metrics",
+      "AIPERF_RUNTIME_DIR": "/home/tegao/infra-token-replay/infx-runtime-01",
+      "AGENTIC_OUTPUT_DIR": "/home/tegao/infra-token-replay/dense-dag-02",
+      "AGENTIC_WARMUP_GRACE_PERIOD": "600",
+      "AIPERF_BENCHMARK_GRACE_PERIOD": "180",
+      "AIPERF_MAX_CONTEXT_LENGTH": "16384",
+      "KV_OFFLOADING": "none",
+      "TP": "1",
+      "EP_SIZE": "1"
+    }
+  },
+  "points": [
+    {
+      "name": "cap131072-c1-r0-generated",
+      "capacity": 131072,
+      "concurrency": 1,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 0,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c1-r0-recorded",
+      "capacity": 131072,
+      "concurrency": 1,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 0,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c4-r0-recorded",
+      "capacity": 131072,
+      "concurrency": 4,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 0,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c4-r0-generated",
+      "capacity": 131072,
+      "concurrency": 4,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 0,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c8-r0-generated",
+      "capacity": 131072,
+      "concurrency": 8,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 0,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c8-r0-recorded",
+      "capacity": 131072,
+      "concurrency": 8,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 0,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c1-r0-recorded",
+      "capacity": 16384,
+      "concurrency": 1,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 0,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c1-r0-generated",
+      "capacity": 16384,
+      "concurrency": 1,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 0,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c4-r0-generated",
+      "capacity": 16384,
+      "concurrency": 4,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 0,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c4-r0-recorded",
+      "capacity": 16384,
+      "concurrency": 4,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 0,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c8-r0-recorded",
+      "capacity": 16384,
+      "concurrency": 8,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 0,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c8-r0-generated",
+      "capacity": 16384,
+      "concurrency": 8,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 0,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c1-r1-recorded",
+      "capacity": 131072,
+      "concurrency": 1,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 1,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c1-r1-generated",
+      "capacity": 131072,
+      "concurrency": 1,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 1,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c4-r1-generated",
+      "capacity": 131072,
+      "concurrency": 4,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 1,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c4-r1-recorded",
+      "capacity": 131072,
+      "concurrency": 4,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 1,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c8-r1-recorded",
+      "capacity": 131072,
+      "concurrency": 8,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 1,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c8-r1-generated",
+      "capacity": 131072,
+      "concurrency": 8,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 1,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c1-r1-generated",
+      "capacity": 16384,
+      "concurrency": 1,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 1,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c1-r1-recorded",
+      "capacity": 16384,
+      "concurrency": 1,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 1,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c4-r1-recorded",
+      "capacity": 16384,
+      "concurrency": 4,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 1,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c4-r1-generated",
+      "capacity": 16384,
+      "concurrency": 4,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 1,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c8-r1-generated",
+      "capacity": 16384,
+      "concurrency": 8,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 1,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c8-r1-recorded",
+      "capacity": 16384,
+      "concurrency": 8,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 1,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c1-r2-generated",
+      "capacity": 131072,
+      "concurrency": 1,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 2,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c1-r2-recorded",
+      "capacity": 131072,
+      "concurrency": 1,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 2,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c4-r2-recorded",
+      "capacity": 131072,
+      "concurrency": 4,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 2,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c4-r2-generated",
+      "capacity": 131072,
+      "concurrency": 4,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 2,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c8-r2-generated",
+      "capacity": 131072,
+      "concurrency": 8,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 2,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap131072-c8-r2-recorded",
+      "capacity": 131072,
+      "concurrency": 8,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 2,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c1-r2-recorded",
+      "capacity": 16384,
+      "concurrency": 1,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 2,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c1-r2-generated",
+      "capacity": 16384,
+      "concurrency": 1,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 2,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c4-r2-generated",
+      "capacity": 16384,
+      "concurrency": 4,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 2,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c4-r2-recorded",
+      "capacity": 16384,
+      "concurrency": 4,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 2,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c8-r2-recorded",
+      "capacity": 16384,
+      "concurrency": 8,
+      "duration": 900,
+      "mode": "recorded",
+      "repeat": 2,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    },
+    {
+      "name": "cap16384-c8-r2-generated",
+      "capacity": 16384,
+      "concurrency": 8,
+      "duration": 900,
+      "mode": "generated",
+      "repeat": 2,
+      "trace": "/home/tegao/infra-token-replay/exgentic-dense-02/sessions"
+    }
+  ],
+  "capacity_evidence": {
+    "path": "/home/tegao/infra-token-replay/dense-capacity-01-summary.json",
+    "max_prompt_plus_output": 16143,
+    "roomy_tokens": 131072,
+    "pressure_tokens": 16384,
+    "roomy_evicted_tokens_including_warmup": 138234,
+    "pressure_evicted_tokens_including_warmup": 1202333,
+    "note": "roomy means active request working sets fit; recycled independent sessions still cause stale-cache eviction"
+  },
+  "code": {
+    "inferencex_entry_commit": "4ac6a90",
+    "campaign_runner_commit": "013bf6e",
+    "sglang_commit": "d611ff2",
+    "harness_commit": "b9772d2",
+    "serving_overlay": "evidence/serving-source-residency-20261106.tar.gz",
+    "seed": 42
+  },
+  "residency_observation": "server_info snapshots every5s; no per-token instrumentation"
+}

@@ -1,0 +1,10 @@
+{
+  "model_sha256": "1bc08ea486537903a86751c370b426206adac2951f568282cbb85594f021705d",
+  "model_hash_kind": "SHA256 of model-content-manifest-20261106.json; individual weight hashes are in that manifest",
+  "serving_source_sha256": "9440ef622bebb19350952c47a47d72822fa4297f69914ab8fe4f878d5f579b47",
+  "serving_source_hash_kind": "SHA256 of deployed scheduler.py",
+  "schedule_batch_sha256": "4acc6e0e20e5c3e72d1fe3e97de16f0c843c1621ec094126827cedaea8f48735",
+  "token_replay_sha256": "cd610f9e01bc780c3a8239f5e65553228ed8af1a52e0f44d3c9d53ea2a6a1408",
+  "observer_sha256": "d8570d6967e6c516c2ac5eb191d35cc038c56f919e6911c674c54b2ed0a2460c",
+  "wheel_sha256": "9270c07b76981109a204a8c3b66cf706b501228ac194da3a9608e8a3a9676037"
+}

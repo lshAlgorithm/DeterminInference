@@ -1,0 +1,32 @@
+diff --git a/python/sglang/srt/managers/io_struct.py b/python/sglang/srt/managers/io_struct.py
+index bd97965..3c6efef 100644
+--- a/python/sglang/srt/managers/io_struct.py
++++ b/python/sglang/srt/managers/io_struct.py
+@@ -280,6 +280,14 @@ class GenerateReqInput(BaseReq):
+         self._validate_inputs()
+         self._determine_batch_size()
+         self._handle_parallel_sampling()
++        if isinstance(self.extra_key, list):
++            if len(self.extra_key) != self.batch_size:
++                raise ValueError("extra_key length must match the input batch size.")
++            self.extra_key = (
++                self.extra_key[0]
++                if self.is_single
++                else self.extra_key * self.parallel_sample_num
++            )
+
+         if self.is_single:
+             self._normalize_single_inputs()
+@@ -656,7 +664,11 @@ class GenerateReqInput(BaseReq):
+             disagg_prefill_dp_rank=self.disagg_prefill_dp_rank,
+             conversation_id=self.conversation_id,
+             priority=self.priority,
+-            extra_key=self.extra_key,
++            extra_key=(
++                self.extra_key[i]
++                if isinstance(self.extra_key, list)
++                else self.extra_key
++            ),
+             no_logs=self.no_logs,
+             custom_labels=self.custom_labels,
+             return_bytes=self.return_bytes,

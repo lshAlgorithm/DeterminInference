@@ -1,0 +1,59 @@
+{
+  "wait_for": "/home/tegao/infra-token-replay/moe-rank-profile-01/status.json",
+  "stages": [
+    {
+      "name": "audit-real",
+      "env": {
+        "OMP_NUM_THREADS": "2",
+        "MKL_NUM_THREADS": "2",
+        "OPENBLAS_NUM_THREADS": "2"
+      },
+      "cmd": [
+        "/home/tegao/infra-token-replay/.venv/bin/python",
+        "/home/tegao/infra-token-replay/audit_moe_recorder.py",
+        "--directory",
+        "/home/tegao/infra-token-replay/moe-workload-on-01/routing-real",
+        "--source",
+        "/home/tegao/infra-token-replay/exgentic-moe-02/sessions",
+        "--model-config",
+        "/home/tegao/infra-token-replay/models/Qwen1.5-MoE-A2.7B-Chat/config.json",
+        "--output",
+        "/home/tegao/infra-token-replay/moe-workload-on-01/routing-real/coverage-audit.json"
+      ]
+    },
+    {
+      "name": "audit-synthetic",
+      "env": {
+        "OMP_NUM_THREADS": "2",
+        "MKL_NUM_THREADS": "2",
+        "OPENBLAS_NUM_THREADS": "2"
+      },
+      "cmd": [
+        "/home/tegao/infra-token-replay/.venv/bin/python",
+        "/home/tegao/infra-token-replay/audit_moe_recorder.py",
+        "--directory",
+        "/home/tegao/infra-token-replay/moe-workload-on-01/routing-synthetic",
+        "--source",
+        "/home/tegao/infra-token-replay/exgentic-moe-synthetic-01/sessions",
+        "--model-config",
+        "/home/tegao/infra-token-replay/models/Qwen1.5-MoE-A2.7B-Chat/config.json",
+        "--output",
+        "/home/tegao/infra-token-replay/moe-workload-on-01/routing-synthetic/coverage-audit.json"
+      ]
+    },
+    {
+      "name": "compare",
+      "env": {},
+      "cmd": [
+        "/home/tegao/infra-token-replay/.harness/bin/python",
+        "/home/tegao/infra-token-replay/summarize_moe.py",
+        "--off",
+        "/home/tegao/infra-token-replay/moe-workload-off-01",
+        "--on",
+        "/home/tegao/infra-token-replay/moe-workload-on-01",
+        "--output",
+        "/home/tegao/infra-token-replay/moe-service-routing-summary.json"
+      ]
+    }
+  ]
+}
